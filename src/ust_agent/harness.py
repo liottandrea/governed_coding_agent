@@ -3,39 +3,160 @@
 Assembles the top-level DeepAgents agent using the high-level API.
 The model is always resolved through gateway.py — never a direct provider SDK.
 
-Phase 0: hello-world single-agent.
-Phase 2+: orchestrator with Knowledge and Code Authoring sub-agents.
+Human-in-the-loop: the agent pauses before any write_file or shell action and
+waits for an explicit approval. The caller drives the approval loop via run().
+
+Langfuse tracing: observability.configure() registers LiteLLM→Langfuse callbacks
+so every model call is traced with token cost. The full agent run is grouped
+under a single Langfuse trace via a per-run trace context.
 """
 from __future__ import annotations
 
 import os
+import uuid
+import logging
+from typing import Any
+
 from dotenv import load_dotenv
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.types import Command
 
 import deepagents
+from deepagents import CompiledSubAgent
 
 from ust_agent.gateway import resolve_model
 from ust_agent import observability
+
+logger = logging.getLogger(__name__)
+
+_SYSTEM_PROMPT = (
+    "You are the UST Coding Agent. "
+    "You help delivery teams write high-quality, UST-styled code "
+    "grounded in prior UST work. "
+    "Use the write_file tool to write code to files. "
+    "Always be concise and precise."
+)
+
+# Tools that require human approval before execution
+_INTERRUPT_TOOLS = {"write_file": True, "shell": True}
 
 
 def build_agent(
     role: str = "planner",
     data_class: str | None = None,
-    **deepagents_kwargs,
-) -> deepagents.CompiledSubAgent:
-    """Build and return the top-level UST orchestrator agent."""
+    checkpointer: MemorySaver | None = None,
+    extra_tools: list | None = None,
+    subagents: list | None = None,
+    **deepagents_kwargs: Any,
+) -> CompiledSubAgent:
+    """Build and return the top-level UST orchestrator agent.
+
+    The agent is wired with:
+    - A Bedrock model resolved via gateway (role + data_class → policy → model)
+    - Human-in-the-loop interrupt on write_file and shell actions
+    - A MemorySaver checkpointer so state is preserved across interrupt/resume
+    - Langfuse tracing via LiteLLM callbacks
+    """
     load_dotenv()
     observability.configure()
 
     effective_data_class = data_class or os.getenv("DEFAULT_DATA_CLASS", "internal")
     model = resolve_model(role, effective_data_class)
 
+    _checkpointer = checkpointer or MemorySaver()
+
     agent = deepagents.create_deep_agent(
         model=model,
-        system_prompt=(
-            "You are the UST Coding Agent. "
-            "You help delivery teams write high-quality, UST-styled code "
-            "grounded in prior UST work. Be concise and precise."
-        ),
+        system_prompt=_SYSTEM_PROMPT,
+        tools=extra_tools or [],
+        subagents=subagents or [],
+        interrupt_on=_INTERRUPT_TOOLS,
+        checkpointer=_checkpointer,
         **deepagents_kwargs,
     )
     return agent
+
+
+def run(
+    task: str,
+    *,
+    role: str = "planner",
+    data_class: str | None = None,
+    agent: CompiledSubAgent | None = None,
+    thread_id: str | None = None,
+    auto_approve: bool = False,
+) -> dict[str, Any]:
+    """Run a task end-to-end with human-in-the-loop approval on writes.
+
+    Returns a dict with keys:
+        messages  — full message history
+        files     — virtual filesystem state (path → content)
+        thread_id — thread ID for resuming later
+        approved  — list of tool calls the human approved
+
+    If auto_approve=True, all write/shell actions are approved automatically
+    (used in tests and the Phase 6 demo when running non-interactively).
+    """
+    _agent = agent or build_agent(role=role, data_class=data_class)
+    _thread_id = thread_id or str(uuid.uuid4())
+    thread_cfg: dict[str, Any] = {"configurable": {"thread_id": _thread_id}}
+
+    from langchain_core.messages import HumanMessage
+
+    state: dict[str, Any] = {"messages": [HumanMessage(content=task)]}
+    approved_actions: list[dict] = []
+
+    logger.info("Starting task on thread %s", _thread_id)
+
+    while True:
+        # Stream so we can detect interrupts event-by-event
+        interrupted = False
+        interrupt_value: Any = None
+
+        for event in _agent.stream(state, config=thread_cfg, stream_mode="updates"):
+            if "__interrupt__" in event:
+                interrupted = True
+                interrupt_value = event["__interrupt__"]
+                break
+
+        if not interrupted:
+            # Run completed — pull final state
+            final = _agent.get_state(thread_cfg)
+            return {
+                "messages": final.values.get("messages", []),
+                "files": final.values.get("files", {}),
+                "thread_id": _thread_id,
+                "approved": approved_actions,
+            }
+
+        # Handle interrupt — one or more tool calls need approval
+        action_requests: list[dict] = interrupt_value[0].value.get("action_requests", [])
+        decisions: list[dict] = []
+
+        for req in action_requests:
+            tool_name = req.get("name", "unknown")
+            tool_args = req.get("args", {})
+            description = req.get("description", "")
+
+            if auto_approve:
+                decision: dict = {"type": "approve"}
+                logger.info("Auto-approving %s(%s)", tool_name, tool_args)
+            else:
+                print(f"\n⚠  Approval required for: {tool_name}")
+                print(f"   Args: {tool_args}")
+                answer = input("   Approve? [y/n/edit] ").strip().lower()
+                if answer in ("y", "yes", ""):
+                    decision = {"type": "approve"}
+                elif answer in ("n", "no"):
+                    reason = input("   Rejection reason (optional): ").strip()
+                    decision = {"type": "reject", "message": reason or None}
+                else:
+                    # edit path — for MVP just approve; full edit UX is later
+                    decision = {"type": "approve"}
+
+            decisions.append(decision)
+            if decision["type"] == "approve":
+                approved_actions.append({"tool": tool_name, "args": tool_args})
+
+        # Resume the graph with the human decisions
+        state = Command(resume={"decisions": decisions})  # type: ignore[assignment]
