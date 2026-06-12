@@ -101,3 +101,36 @@ def resolve_model(
 
     params.update(extra_kwargs)
     return ChatLiteLLM(model=model_id, model_kwargs=params)
+
+
+# ── Embedding ────────────────────────────────────────────────────────────────
+
+_EMBED_MODEL = "bedrock/amazon.titan-embed-text-v2:0"
+_EMBED_AWS_PARAMS = {
+    "aws_profile_name": "genai-agent-user",
+    "aws_region_name": "us-east-1",
+}
+_EMBED_DIM = 1024
+
+
+def embed(texts: list[str], data_class: str = "internal") -> list[list[float]]:
+    """Embed a batch of texts via LiteLLM → Bedrock Titan Embed v2.
+
+    Returns a list of 1024-dimensional float vectors, one per input text.
+    Policy check: internal/public → Bedrock; restricted must use a local model
+    (raises PolicyError if no local embedding model is configured yet).
+    """
+    import litellm
+
+    if data_class == "restricted":
+        raise policy.PolicyError(
+            "Embedding for data_class='restricted' requires a local embedding "
+            "model. Configure one in gateway.py before ingesting restricted data."
+        )
+
+    resp = litellm.embedding(
+        model=_EMBED_MODEL,
+        input=texts,
+        **_EMBED_AWS_PARAMS,
+    )
+    return [item["embedding"] for item in resp.data]
