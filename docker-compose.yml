@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -33,6 +31,17 @@ services:
       NEXTAUTH_URL: http://localhost:3000
       TELEMETRY_ENABLED: "false"
       LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+      # Seed a default org/project/user on first boot so CI and local dev
+      # can use predictable API keys without manual UI setup.
+      LANGFUSE_INIT_ORG_ID: ust-org
+      LANGFUSE_INIT_ORG_NAME: UST
+      LANGFUSE_INIT_PROJECT_ID: ust-coding-agent
+      LANGFUSE_INIT_PROJECT_NAME: ust-coding-agent
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-ust-coding-agent-local
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-ust-coding-agent-local
+      LANGFUSE_INIT_USER_EMAIL: admin@ust-agent.local
+      LANGFUSE_INIT_USER_PASSWORD: UstAgent2024!
+      LANGFUSE_INIT_USER_NAME: UST Admin
 
 volumes:
   pgdata:
