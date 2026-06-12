@@ -3,7 +3,7 @@
 Assembles the top-level DeepAgents agent using the high-level API.
 The model is always resolved through gateway.py — never a direct provider SDK.
 
-Human-in-the-loop: the agent pauses before any write_file or shell action and
+Human-in-the-loop: the agent pauses before any write_file or execute action and
 waits for an explicit approval. The caller drives the approval loop via run().
 
 Langfuse tracing: observability.configure() registers LiteLLM→Langfuse callbacks
@@ -37,8 +37,9 @@ _SYSTEM_PROMPT = (
     "Always be concise and precise."
 )
 
-# Tools that require human approval before execution
-_INTERRUPT_TOOLS = {"write_file": True, "shell": True}
+# Tools that require human approval before execution.
+# deepagents' built-in execute tool is named "execute" (not "shell").
+_INTERRUPT_TOOLS = {"write_file": True, "execute": True}
 
 
 def build_agent(

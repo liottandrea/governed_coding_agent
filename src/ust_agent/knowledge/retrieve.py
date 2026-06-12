@@ -16,6 +16,7 @@ import os
 from dataclasses import dataclass
 
 import psycopg
+from langchain_core.tools import tool
 from pgvector.psycopg import register_vector
 
 from ust_agent import gateway
@@ -117,3 +118,16 @@ def format_for_prompt(citations: list[Citation]) -> str:
     for i, c in enumerate(citations, 1):
         parts.append(f"## Snippet {i}\n{c.format()}\n")
     return "\n".join(parts)
+
+
+# ── LangChain tool (shared by Knowledge and Code Authoring sub-agents) ────────
+
+@tool
+def retrieve_knowledge_tool(query: str, top_k: int = 5) -> str:
+    """Search UST's knowledge store for prior code matching the query.
+
+    Returns formatted code snippets with citations (repo/path:symbol@commit).
+    Deprecated snippets are flagged with a warning symbol.
+    """
+    citations = retrieve(query, top_k=top_k)
+    return format_for_prompt(citations)

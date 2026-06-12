@@ -40,12 +40,12 @@ def test_build_agent_has_checkpointer() -> None:
     assert agent.checkpointer is not None
 
 
-def test_interrupt_tools_include_write_and_shell() -> None:
-    """The interrupt set must cover write_file and shell."""
+def test_interrupt_tools_include_write_and_execute() -> None:
+    """The interrupt set must cover write_file and execute."""
     os.chdir(ROOT)
     from ust_agent.harness import _INTERRUPT_TOOLS
     assert "write_file" in _INTERRUPT_TOOLS
-    assert "shell" in _INTERRUPT_TOOLS
+    assert "execute" in _INTERRUPT_TOOLS
 
 
 def test_run_auto_approve_completes(tmp_path: Path) -> None:
