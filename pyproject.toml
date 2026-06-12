@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "UST Coding Agent — model-neutral, governed coding agent built on DeepAgents"
 requires-python = ">=3.12"
 dependencies = [
+    "boto3>=1.35.0,<2.0.0",
     "deepagents==0.6.8",
     "langchain-litellm>=0.2.0",
     "langfuse>=2.0.0,<3.0.0",

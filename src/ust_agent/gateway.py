@@ -1,9 +1,12 @@
-"""LiteLLM gateway.
+"""LiteLLM gateway — AWS Bedrock backend.
 
-All model calls in the agent go through resolve_model(role, data_class) which:
+All model calls go through resolve_model(role, data_class) which:
   1. Looks up the model group for the role in routing-rules.yaml
   2. Enforces the data-class policy via policy.py
-  3. Returns a ChatLiteLLM instance configured with the resolved group name
+  3. Reads the actual Bedrock model ID + AWS params from litellm.config.yaml
+  4. Returns a ChatLiteLLM instance with the resolved params
+
+No provider SDK is imported directly — all calls go through LiteLLM.
 
 Usage:
     chat_model = resolve_model("codegen", "internal")
@@ -22,11 +25,35 @@ from ust_agent import policy
 
 
 _ROUTING_CONFIG = Path(os.getenv("ROUTING_CONFIG_PATH", "config/routing-rules.yaml"))
+_LITELLM_CONFIG = Path(os.getenv("LITELLM_CONFIG_PATH", "config/litellm.config.yaml"))
+
+# Ensure the AWS profile is set for all litellm calls in this process.
+os.environ.setdefault("AWS_PROFILE", os.getenv("AWS_PROFILE", "genai-agent-user"))
 
 
 def _load_routing(path: Path = _ROUTING_CONFIG) -> dict[str, Any]:
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+def _load_litellm_config(path: Path = _LITELLM_CONFIG) -> dict[str, Any]:
+    with open(path) as f:
+        return yaml.safe_load(f)
+
+
+def _litellm_params_for_group(
+    group: str,
+    litellm_config_path: Path = _LITELLM_CONFIG,
+) -> dict[str, Any]:
+    """Return the litellm_params dict for the named model group."""
+    cfg = _load_litellm_config(litellm_config_path)
+    for entry in cfg.get("model_list", []):
+        if entry.get("model_name") == group:
+            return dict(entry.get("litellm_params", {}))
+    raise ValueError(
+        f"Model group '{group}' not found in {litellm_config_path}. "
+        f"Available groups: {[e['model_name'] for e in cfg.get('model_list', [])]}"
+    )
 
 
 def resolve_group(role: str, routing_path: Path = _ROUTING_CONFIG) -> str:
@@ -45,10 +72,14 @@ def resolve_model(
     data_class: str,
     *,
     routing_path: Path = _ROUTING_CONFIG,
+    litellm_config_path: Path = _LITELLM_CONFIG,
     policy_path: Path | None = None,
-    **litellm_kwargs: Any,
+    **extra_kwargs: Any,
 ) -> ChatLiteLLM:
     """Resolve role + data_class → policy-checked ChatLiteLLM instance.
+
+    Reads the actual model ID and AWS params from litellm.config.yaml so
+    LiteLLM receives a fully-qualified model string (e.g. bedrock/...).
 
     Raises policy.PolicyError if the combination is forbidden.
     """
@@ -59,4 +90,14 @@ def resolve_model(
     else:
         policy.check(data_class, group)
 
-    return ChatLiteLLM(model=group, **litellm_kwargs)
+    params = _litellm_params_for_group(group, litellm_config_path)
+    model_id: str = params.pop("model")
+
+    # Strip env-reference syntax for api_base (used by private group)
+    for key, val in list(params.items()):
+        if isinstance(val, str) and val.startswith("os.environ/"):
+            env_key = val.removeprefix("os.environ/")
+            params[key] = os.environ.get(env_key, "")
+
+    params.update(extra_kwargs)
+    return ChatLiteLLM(model=model_id, model_kwargs=params)

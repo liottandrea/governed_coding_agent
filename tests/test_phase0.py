@@ -65,7 +65,10 @@ def test_resolve_model_returns_chat_litellm() -> None:
     from langchain_litellm import ChatLiteLLM
     model = resolve_model("codegen", "internal")
     assert isinstance(model, ChatLiteLLM)
-    assert model.model == "frontier"
+    # model.model should be the fully-qualified Bedrock ID, not the group alias
+    assert model.model.startswith("bedrock/"), (
+        f"Expected bedrock/ model ID, got: {model.model!r}"
+    )
 
 
 def test_resolve_model_restricted_raises_policy_error() -> None:
