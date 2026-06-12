@@ -2,9 +2,11 @@
 # Each class lists the model groups it is ALLOWED to use.
 # Anything not listed is denied. The gateway enforces this before every call.
 #
-# Rule: restricted data must ONLY go to the private (local) group.
-#       internal data may use cheap/mid/frontier but not private-only local.
+# Rule: restricted data must ONLY go to local groups (never an external API).
+#       internal data may use Bedrock groups but not local-only groups.
 #       public data may use any group.
+# Local groups (local_fast / local_standard / local_heavy / private) are
+# always safe for restricted data because they never leave the machine.
 
 classes:
   public:
@@ -13,6 +15,9 @@ classes:
       - mid
       - frontier
       - private
+      - local_fast
+      - local_standard
+      - local_heavy
     description: "No sensitivity — freely routable to any group"
 
   internal:
@@ -20,9 +25,15 @@ classes:
       - cheap
       - mid
       - frontier
-    description: "UST internal work — must not leave the approved external APIs"
+      - local_fast
+      - local_standard
+      - local_heavy
+    description: "UST internal work — Bedrock or local inference"
 
   restricted:
     allowed_groups:
       - private
+      - local_fast
+      - local_standard
+      - local_heavy
     description: "Sensitive / regulated — local inference only, never external"

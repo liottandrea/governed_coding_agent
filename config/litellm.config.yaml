@@ -1,9 +1,10 @@
-# LiteLLM model group definitions — AWS Bedrock backend.
-# All groups use cross-region inference profiles (required for Claude 4.x).
-# Auth comes from the genai-agent-user AWS profile — no API keys stored here.
+# LiteLLM model group definitions — AWS Bedrock + local Ollama backends.
+# All Bedrock groups use cross-region inference profiles (required for Claude 4.x).
+# Bedrock auth comes from the genai-agent-user AWS profile — no API keys stored here.
+# Local groups talk to Ollama at http://localhost:11434 — safe for all data classes.
 
 model_list:
-  # ── frontier ────────────────────────────────────────────────────────────────
+  # ── Bedrock: frontier ────────────────────────────────────────────────────────
   # Claude Sonnet 4.6 (US cross-region inference profile)
   - model_name: frontier
     litellm_params:
@@ -11,7 +12,7 @@ model_list:
       aws_profile_name: genai-agent-user
       aws_region_name: us-east-1
 
-  # ── mid ─────────────────────────────────────────────────────────────────────
+  # ── Bedrock: mid ─────────────────────────────────────────────────────────────
   # Claude Sonnet 4.5 — balanced capability/cost
   - model_name: mid
     litellm_params:
@@ -19,7 +20,7 @@ model_list:
       aws_profile_name: genai-agent-user
       aws_region_name: us-east-1
 
-  # ── cheap ───────────────────────────────────────────────────────────────────
+  # ── Bedrock: cheap ───────────────────────────────────────────────────────────
   # Claude Haiku 4.5 — fast and low-cost for embeddings and summaries
   - model_name: cheap
     litellm_params:
@@ -27,12 +28,34 @@ model_list:
       aws_profile_name: genai-agent-user
       aws_region_name: us-east-1
 
-  # ── private ─────────────────────────────────────────────────────────────────
-  # For data-class: restricted — must stay on-prem / local inference only.
+  # ── Bedrock: private ─────────────────────────────────────────────────────────
+  # Legacy placeholder — superseded by local_* groups below.
+  # Kept for backwards-compat with data-classes.yaml; maps to local_standard.
   - model_name: private
     litellm_params:
-      model: ollama/llama3.2
-      api_base: os.environ/PRIVATE_MODEL_ENDPOINT
+      model: ollama/devstral
+      api_base: http://localhost:11434
+
+  # ── Local: fast ──────────────────────────────────────────────────────────────
+  # phi4-mini — lightweight, very fast. Good for classification/routing/lint.
+  - model_name: local_fast
+    litellm_params:
+      model: ollama/phi4-mini
+      api_base: http://localhost:11434
+
+  # ── Local: standard ──────────────────────────────────────────────────────────
+  # devstral — code-focused, suitable for generation tasks that must stay local.
+  - model_name: local_standard
+    litellm_params:
+      model: ollama/devstral
+      api_base: http://localhost:11434
+
+  # ── Local: heavy ─────────────────────────────────────────────────────────────
+  # qwen3.6:35b — highest local capability for complex reasoning.
+  - model_name: local_heavy
+    litellm_params:
+      model: ollama/qwen3.6:35b
+      api_base: http://localhost:11434
 
 litellm_settings:
   request_timeout: 120

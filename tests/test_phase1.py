@@ -40,7 +40,10 @@ def test_resolve_model_uses_full_bedrock_id() -> None:
     assert model.model.startswith("bedrock/us.anthropic.")
 
 
-def test_all_roles_resolve_to_bedrock_group() -> None:
+_LOCAL_GROUPS = {"private", "local_fast", "local_standard", "local_heavy"}
+
+
+def test_all_roles_resolve_to_known_group() -> None:
     """Every role in routing-rules.yaml must map to a group in litellm.config.yaml."""
     os.chdir(ROOT)
     import yaml
@@ -51,13 +54,33 @@ def test_all_roles_resolve_to_bedrock_group() -> None:
 
     for role, cfg in routing["roles"].items():
         group = cfg["default_group"]
-        if group == "private":
-            continue  # private points at local endpoint, skip in CI
+        if group in _LOCAL_GROUPS:
+            continue  # local groups need Ollama running, skip in CI
         params = _litellm_params_for_group(group)
         assert params["model"].startswith("bedrock/"), (
             f"Role '{role}' → group '{group}' → model '{params['model']}' "
             "does not start with 'bedrock/'"
         )
+
+
+def test_local_groups_exist_in_litellm_config() -> None:
+    """local_fast, local_standard, local_heavy must all be in litellm config."""
+    os.chdir(ROOT)
+    from ust_agent.gateway import _litellm_params_for_group
+    for group in ("local_fast", "local_standard", "local_heavy"):
+        params = _litellm_params_for_group(group)
+        assert params["model"].startswith("ollama/"), (
+            f"Expected ollama/ model for {group}, got {params['model']!r}"
+        )
+        assert params["api_base"] == "http://localhost:11434"
+
+
+def test_restricted_class_allows_local_groups() -> None:
+    """restricted data class must permit all local_* groups."""
+    os.chdir(ROOT)
+    from ust_agent.policy import check
+    for group in ("local_fast", "local_standard", "local_heavy"):
+        check("restricted", group)  # must not raise
 
 
 def test_observability_configure_no_keys_is_safe() -> None:
