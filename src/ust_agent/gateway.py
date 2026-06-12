@@ -6,6 +6,10 @@ All model calls go through resolve_model(role, data_class) which:
   3. Reads the actual Bedrock model ID + AWS params from litellm.config.yaml
   4. Returns a ChatLiteLLM instance with the resolved params
 
+Routing cascade: if a role defines a fallback_group in routing-rules.yaml, the
+returned model is wrapped with .with_fallbacks([fallback_model]) so that any
+exception on the primary triggers a transparent retry on the fallback.
+
 No provider SDK is imported directly — all calls go through LiteLLM.
 
 Usage:
@@ -14,14 +18,21 @@ Usage:
 """
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import yaml
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import BaseMessage
+from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_litellm import ChatLiteLLM
 
 from ust_agent import policy
+
+logger = logging.getLogger(__name__)
 
 
 _ROUTING_CONFIG = Path(os.getenv("ROUTING_CONFIG_PATH", "config/routing-rules.yaml"))
@@ -56,8 +67,73 @@ def _litellm_params_for_group(
     )
 
 
+class CascadingChatModel(BaseChatModel):
+    """BaseChatModel that tries a primary model and silently falls back on error.
+
+    Returned by resolve_model() when a role defines fallback_group. It IS a
+    BaseChatModel so deepagents accepts it unchanged via isinstance() check.
+    bind_tools() returns primary.with_fallbacks([fallback]) — valid for use
+    inside the LangGraph node where deepagents no longer type-checks.
+    """
+
+    primary: ChatLiteLLM
+    fallback: ChatLiteLLM
+
+    @property
+    def _llm_type(self) -> str:
+        return "cascading-litellm"
+
+    def _generate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        try:
+            return self.primary._generate(
+                messages, stop=stop, run_manager=run_manager, **kwargs
+            )
+        except Exception as exc:
+            logger.warning(
+                "Primary model failed (%s: %s); cascading to fallback",
+                type(exc).__name__,
+                exc,
+            )
+            return self.fallback._generate(
+                messages, stop=stop, run_manager=run_manager, **kwargs
+            )
+
+    def _stream(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: CallbackManagerForLLMRun | None = None,
+        **kwargs: Any,
+    ) -> Iterator[ChatGenerationChunk]:
+        try:
+            yield from self.primary._stream(
+                messages, stop=stop, run_manager=run_manager, **kwargs
+            )
+        except Exception as exc:
+            logger.warning(
+                "Primary model stream failed (%s: %s); cascading to fallback",
+                type(exc).__name__,
+                exc,
+            )
+            yield from self.fallback._stream(
+                messages, stop=stop, run_manager=run_manager, **kwargs
+            )
+
+    def bind_tools(self, tools: list, **kwargs: Any) -> Any:
+        """Bind tools to both models and return a fallback-aware runnable."""
+        bound_primary = self.primary.bind_tools(tools, **kwargs)
+        bound_fallback = self.fallback.bind_tools(tools, **kwargs)
+        return bound_primary.with_fallbacks([bound_fallback])
+
+
 def resolve_group(role: str, routing_path: Path = _ROUTING_CONFIG) -> str:
-    """Return the model group name for a given role."""
+    """Return the primary model group name for a given role."""
     routing = _load_routing(routing_path)
     roles: dict[str, Any] = routing.get("roles", {})
     if role not in roles:
@@ -65,6 +141,33 @@ def resolve_group(role: str, routing_path: Path = _ROUTING_CONFIG) -> str:
             f"Unknown role '{role}'. Known roles: {list(roles.keys())}"
         )
     return roles[role]["default_group"]
+
+
+def resolve_fallback_group(
+    role: str,
+    routing_path: Path = _ROUTING_CONFIG,
+) -> str | None:
+    """Return the fallback model group for a role, or None if not defined."""
+    routing = _load_routing(routing_path)
+    return routing.get("roles", {}).get(role, {}).get("fallback_group")
+
+
+def _build_chat_litellm(
+    group: str,
+    litellm_config_path: Path,
+    **extra_kwargs: Any,
+) -> ChatLiteLLM:
+    """Construct a ChatLiteLLM from a resolved group name."""
+    params = _litellm_params_for_group(group, litellm_config_path)
+    model_id: str = params.pop("model")
+
+    for key, val in list(params.items()):
+        if isinstance(val, str) and val.startswith("os.environ/"):
+            env_key = val.removeprefix("os.environ/")
+            params[key] = os.environ.get(env_key, "")
+
+    params.update(extra_kwargs)
+    return ChatLiteLLM(model=model_id, model_kwargs=params)
 
 
 def resolve_model(
@@ -78,10 +181,12 @@ def resolve_model(
 ) -> ChatLiteLLM:
     """Resolve role + data_class → policy-checked ChatLiteLLM instance.
 
-    Reads the actual model ID and AWS params from litellm.config.yaml so
-    LiteLLM receives a fully-qualified model string (e.g. bedrock/...).
+    If the role defines a fallback_group in routing-rules.yaml and that group
+    is allowed by policy, the returned model is wrapped with
+    .with_fallbacks([fallback]) so exceptions on the primary are transparently
+    retried on the fallback.
 
-    Raises policy.PolicyError if the combination is forbidden.
+    Raises policy.PolicyError if the primary combination is forbidden.
     """
     group = resolve_group(role, routing_path)
 
@@ -90,17 +195,24 @@ def resolve_model(
     else:
         policy.check(data_class, group)
 
-    params = _litellm_params_for_group(group, litellm_config_path)
-    model_id: str = params.pop("model")
+    primary = _build_chat_litellm(group, litellm_config_path, **extra_kwargs)
 
-    # Strip env-reference syntax for api_base (used by private group)
-    for key, val in list(params.items()):
-        if isinstance(val, str) and val.startswith("os.environ/"):
-            env_key = val.removeprefix("os.environ/")
-            params[key] = os.environ.get(env_key, "")
+    fallback_group = resolve_fallback_group(role, routing_path)
+    if fallback_group and fallback_group != group:
+        try:
+            if policy_path is not None:
+                policy.check(data_class, fallback_group, policy_path)
+            else:
+                policy.check(data_class, fallback_group)
+            fallback = _build_chat_litellm(
+                fallback_group, litellm_config_path, **extra_kwargs
+            )
+            return CascadingChatModel(primary=primary, fallback=fallback)
+        except policy.PolicyError:
+            # Fallback group is not allowed for this data class — use primary only.
+            pass
 
-    params.update(extra_kwargs)
-    return ChatLiteLLM(model=model_id, model_kwargs=params)
+    return primary
 
 
 # ── Embedding ────────────────────────────────────────────────────────────────
