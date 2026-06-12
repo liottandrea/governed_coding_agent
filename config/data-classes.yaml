@@ -1,0 +1,28 @@
+# Data-class policy.
+# Each class lists the model groups it is ALLOWED to use.
+# Anything not listed is denied. The gateway enforces this before every call.
+#
+# Rule: restricted data must ONLY go to the private (local) group.
+#       internal data may use cheap/mid/frontier but not private-only local.
+#       public data may use any group.
+
+classes:
+  public:
+    allowed_groups:
+      - cheap
+      - mid
+      - frontier
+      - private
+    description: "No sensitivity — freely routable to any group"
+
+  internal:
+    allowed_groups:
+      - cheap
+      - mid
+      - frontier
+    description: "UST internal work — must not leave the approved external APIs"
+
+  restricted:
+    allowed_groups:
+      - private
+    description: "Sensitive / regulated — local inference only, never external"

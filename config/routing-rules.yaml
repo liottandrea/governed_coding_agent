@@ -1,0 +1,29 @@
+# Maps logical agent roles to model groups.
+# The gateway resolves role → group → model via litellm.config.yaml.
+# All combinations are further gated by data-classes.yaml.
+
+roles:
+  planner:
+    default_group: mid
+    description: "Orchestrator planning and task decomposition"
+
+  codegen:
+    default_group: frontier
+    description: "Code authoring and generation"
+
+  knowledge_retrieval:
+    default_group: mid
+    description: "Knowledge sub-agent reasoning over retrieved context"
+
+  embedding:
+    default_group: cheap
+    description: "Chunk embedding during knowledge ingest"
+
+  summary:
+    default_group: cheap
+    description: "Summarisation and low-stakes synthesis"
+
+  testing:
+    default_group: cheap
+    description: "Test generation (Phase 5)"
+    fallback_group: mid

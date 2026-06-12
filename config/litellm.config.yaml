@@ -1,0 +1,36 @@
+# LiteLLM model group definitions.
+# Each group is referenced by name from routing-rules.yaml.
+# Actual model IDs are resolved here; API keys come from environment variables.
+
+model_list:
+  # ── frontier ────────────────────────────────────────────────────────────────
+  - model_name: frontier
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ── mid ─────────────────────────────────────────────────────────────────────
+  - model_name: mid
+    litellm_params:
+      model: anthropic/claude-haiku-4-5-20251001
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ── cheap ───────────────────────────────────────────────────────────────────
+  - model_name: cheap
+    litellm_params:
+      model: anthropic/claude-haiku-4-5-20251001
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ── private ─────────────────────────────────────────────────────────────────
+  # Points at a local endpoint (e.g. Ollama). Must never be an external API.
+  # Replace model name to match whatever is served locally.
+  - model_name: private
+    litellm_params:
+      model: ollama/llama3.2
+      api_base: os.environ/PRIVATE_MODEL_ENDPOINT
+
+litellm_settings:
+  # Surface token counts in responses for cost tracking
+  success_callback: []
+  failure_callback: []
+  request_timeout: 120
