@@ -1,6 +1,7 @@
 """UST Coding Agent — interactive CLI.
 
 Drop-in terminal coding assistant. Run it in any project directory.
+Sessions are persisted in Postgres so you can resume after a restart.
 
 Usage:
     # Interactive REPL (like running `claude`)
@@ -9,30 +10,34 @@ Usage:
     # Single-shot task
     ust-agent "Refactor the auth module to use our retry decorator pattern"
 
-    # Resume a previous session
+    # Resume a previous session by thread ID
     ust-agent --session <thread-id>
+
+    # List saved sessions
+    ust-agent --list-sessions
 
     # Restricted data (local models only, never Bedrock)
     ust-agent --data-class restricted
 
 Flags:
-    --data-class   public | internal | restricted  (default: internal)
-    --auto-approve  skip HITL prompts (use in CI / scripts)
-    --session       thread ID to resume (printed at session start)
-    --role          agent role: planner | codegen  (default: planner)
-    --no-knowledge  skip UST knowledge store queries
+    --data-class      public | internal | restricted  (default: internal)
+    --auto-approve    skip HITL prompts (use in CI / scripts)
+    --session         thread ID to resume
+    --list-sessions   print recent sessions and exit
+    --role            agent role: planner | codegen  (default: planner)
+    --no-knowledge    skip UST knowledge store queries
 """
 from __future__ import annotations
 
 import argparse
 import logging
 import os
-import sys
 import uuid
 from pathlib import Path
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
+from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.types import Command
 
 logging.basicConfig(level=logging.WARNING)
@@ -67,10 +72,25 @@ unless the task is genuinely ambiguous — make a sensible assumption and procee
 """
 
 
+# ── Postgres connection ───────────────────────────────────────────────────────
+
+def _dsn() -> str:
+    return (
+        f"host={os.environ.get('POSTGRES_HOST', 'localhost')} "
+        f"port={os.environ.get('POSTGRES_PORT', '5432')} "
+        f"dbname={os.environ.get('POSTGRES_DB', 'ust_agent')} "
+        f"user={os.environ.get('POSTGRES_USER', 'ust_agent')} "
+        f"password={os.environ.get('POSTGRES_PASSWORD', 'changeme')}"
+    )
+
+
+# ── Agent builder ─────────────────────────────────────────────────────────────
+
 def _build_agent(
     data_class: str,
     role: str,
     include_knowledge: bool,
+    checkpointer: PostgresSaver,
 ) -> object:
     from ust_agent.harness import build_agent
     from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
@@ -81,8 +101,11 @@ def _build_agent(
         data_class=data_class,
         extra_tools=extra_tools,
         system_prompt=_SYSTEM_PROMPT,
+        checkpointer=checkpointer,
     )
 
+
+# ── HITL / turn execution ─────────────────────────────────────────────────────
 
 def _run_turn(
     agent: object,
@@ -91,7 +114,7 @@ def _run_turn(
     auto_approve: bool,
     approved_actions: list,
 ) -> str:
-    """Run one REPL turn and return the agent's final text response."""
+    """Run one REPL turn, handling any HITL interrupts, and return the response."""
     state: object = {"messages": [HumanMessage(content=message)]}
 
     while True:
@@ -124,14 +147,12 @@ def _run_turn(
                 logger.info("Auto-approving %s", tool_name)
             else:
                 print(f"\n  ⚠  {tool_name}")
-                # Show a compact preview of the action
                 if tool_name == "write_file":
                     path = tool_args.get("file_path", "?")
                     lines = tool_args.get("content", "").splitlines()
                     print(f"     write → {path}  ({len(lines)} lines)")
                 elif tool_name == "execute":
-                    cmd = tool_args.get("command", "?")
-                    print(f"     exec  → {cmd}")
+                    print(f"     exec  → {tool_args.get('command', '?')}")
                 else:
                     print(f"     args  → {list(tool_args.keys())}")
 
@@ -149,6 +170,8 @@ def _run_turn(
         state = Command(resume={"decisions": decisions})  # type: ignore[assignment]
 
 
+# ── REPL ──────────────────────────────────────────────────────────────────────
+
 def _repl(
     agent: object,
     thread_id: str,
@@ -160,10 +183,11 @@ def _repl(
     approved_actions: list = []
 
     print(_BANNER)
-    print(f"  session  : {thread_id}")
+    print(f"  session   : {thread_id}")
     print(f"  data class: {data_class}")
     print(f"  directory : {cwd}")
-    print(f"  resume   : ust-agent --session {thread_id}\n")
+    print(f"  resume    : ust-agent --session {thread_id}")
+    print(f"  history   : persisted in Postgres\n")
 
     while True:
         try:
@@ -187,6 +211,36 @@ def _repl(
             print(f"\n  [error] {exc}\n")
             logger.exception("Turn failed")
 
+
+# ── Session listing ───────────────────────────────────────────────────────────
+
+def _list_sessions(checkpointer: PostgresSaver) -> None:
+    """Print recent sessions from the checkpoint store."""
+    try:
+        rows = list(checkpointer.list(config=None, limit=20))
+    except Exception as exc:
+        print(f"Could not list sessions: {exc}")
+        return
+
+    if not rows:
+        print("No saved sessions found.")
+        return
+
+    seen: set[str] = set()
+    print(f"\n{'Thread ID':<38}  {'Created':<20}  Turns")
+    print("─" * 66)
+    for cp in rows:
+        tid = cp.config["configurable"]["thread_id"]
+        if tid in seen:
+            continue
+        seen.add(tid)
+        ts = str(cp.metadata.get("created_at", ""))[:19]
+        step = cp.metadata.get("step", "?")
+        print(f"  {tid:<36}  {ts:<20}  {step}")
+    print(f"\nResume: ust-agent --session <thread-id>\n")
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
 
 def main(argv: list[str] | None = None) -> None:
     load_dotenv()
@@ -220,6 +274,12 @@ def main(argv: list[str] | None = None) -> None:
         help="Resume a previous session by thread ID",
     )
     parser.add_argument(
+        "--list-sessions",
+        action="store_true",
+        default=False,
+        help="Print recent sessions and exit",
+    )
+    parser.add_argument(
         "--role",
         default="planner",
         choices=["planner", "codegen"],
@@ -234,29 +294,36 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
 
-    cwd = Path.cwd()
-    thread_id = args.session or str(uuid.uuid4())
-
     from ust_agent import observability
     observability.configure()
 
-    agent = _build_agent(
-        data_class=args.data_class,
-        role=args.role,
-        include_knowledge=not args.no_knowledge,
-    )
+    cwd = Path.cwd()
+    thread_id = args.session or str(uuid.uuid4())
 
-    if args.task:
-        # Single-shot mode
-        thread_cfg = {"configurable": {"thread_id": thread_id}}
-        approved: list = []
-        response = _run_turn(
-            agent, args.task, thread_cfg, args.auto_approve, approved
+    with PostgresSaver.from_conn_string(_dsn()) as checkpointer:
+        # Create checkpoint tables on first run (idempotent)
+        checkpointer.setup()
+
+        if args.list_sessions:
+            _list_sessions(checkpointer)
+            return
+
+        agent = _build_agent(
+            data_class=args.data_class,
+            role=args.role,
+            include_knowledge=not args.no_knowledge,
+            checkpointer=checkpointer,
         )
-        print(response)
-    else:
-        # Interactive REPL
-        _repl(agent, thread_id, args.auto_approve, args.data_class, cwd)
+
+        if args.task:
+            thread_cfg = {"configurable": {"thread_id": thread_id}}
+            approved: list = []
+            response = _run_turn(
+                agent, args.task, thread_cfg, args.auto_approve, approved
+            )
+            print(response)
+        else:
+            _repl(agent, thread_id, args.auto_approve, args.data_class, cwd)
 
 
 if __name__ == "__main__":

@@ -26,8 +26,11 @@ ust-agent
 # Single-shot task
 ust-agent "Refactor the CSV parser to use our retry decorator pattern"
 
-# Resume a previous session (thread ID printed at startup)
+# Resume a previous session (persisted in Postgres — survives restarts)
 ust-agent --session <thread-id>
+
+# List all saved sessions
+ust-agent --list-sessions
 
 # Restricted data — routes to local Ollama, never Bedrock
 ust-agent --data-class restricted
@@ -43,10 +46,11 @@ ust-agent --auto-approve "Add type hints to all public functions in src/"
 ║          UST Coding Agent  —  interactive            ║
 ║  Type your task. 'exit' or Ctrl+C to quit.          ║
 ╚══════════════════════════════════════════════════════╝
-  session  : a3f2...
+  session   : a3f2c8d1-4e9b-4f1a-b2c3-d4e5f6a7b8c9
   data class: internal
   directory : /Users/you/projects/my-service
-  resume   : ust-agent --session a3f2...
+  resume    : ust-agent --session a3f2c8d1-...
+  history   : persisted in Postgres
 
 ▶ Add input validation to the payment processor
 
@@ -67,10 +71,27 @@ For every task the agent:
 4. Runs `execute` to verify (tests, linters) — again with approval
 5. Cites the UST pattern used at the top of any new file
 
-Session history is kept in memory across turns (LangGraph `MemorySaver`), so
-follow-up tasks share full context. Use `--session` to reload a thread after
-restarting the process (note: in-memory only — history is lost on process exit
-unless you add a persistent checkpointer).
+### Session persistence
+
+Sessions are stored in the same Postgres instance used for pgvector
+(`langgraph-checkpoint-postgres`). The full conversation history — every message,
+tool call, and agent decision — survives process restarts.
+
+```bash
+# See all your saved sessions
+ust-agent --list-sessions
+
+# Thread ID   Created              Turns
+# ─────────────────────────────────────────────────────────────────────
+# a3f2c8d1-…  2026-06-15 09:12:00  14
+# 7b1e4f22-…  2026-06-14 16:45:00  6
+
+# Pick up exactly where you left off
+ust-agent --session a3f2c8d1-4e9b-4f1a-b2c3-d4e5f6a7b8c9
+```
+
+The checkpoint tables (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`)
+are created automatically on first run via `checkpointer.setup()`.
 
 ---
 
