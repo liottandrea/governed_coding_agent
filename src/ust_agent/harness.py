@@ -48,6 +48,7 @@ def build_agent(
     checkpointer: MemorySaver | None = None,
     extra_tools: list | None = None,
     subagents: list | None = None,
+    system_prompt: str | None = None,
     **deepagents_kwargs: Any,
 ) -> CompiledSubAgent:
     """Build and return the top-level UST orchestrator agent.
@@ -57,6 +58,9 @@ def build_agent(
     - Human-in-the-loop interrupt on write_file and shell actions
     - A MemorySaver checkpointer so state is preserved across interrupt/resume
     - Langfuse tracing via LiteLLM callbacks
+
+    Args:
+        system_prompt: Override the default system prompt (used by the CLI).
     """
     load_dotenv()
     observability.configure()
@@ -68,7 +72,7 @@ def build_agent(
 
     agent = deepagents.create_deep_agent(
         model=model,
-        system_prompt=_SYSTEM_PROMPT,
+        system_prompt=system_prompt or _SYSTEM_PROMPT,
         tools=extra_tools or [],
         subagents=subagents or [],
         interrupt_on=_INTERRUPT_TOOLS,

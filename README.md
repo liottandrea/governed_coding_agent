@@ -14,6 +14,66 @@ sensitive code from ever reaching an external API.
 
 ---
 
+## Using as a coding assistant
+
+`ust-agent` is a terminal-based coding assistant — a governed, knowledge-grounded
+alternative to Claude Code. Run it inside any project directory.
+
+```bash
+# Interactive REPL (like running `claude`)
+ust-agent
+
+# Single-shot task
+ust-agent "Refactor the CSV parser to use our retry decorator pattern"
+
+# Resume a previous session (thread ID printed at startup)
+ust-agent --session <thread-id>
+
+# Restricted data — routes to local Ollama, never Bedrock
+ust-agent --data-class restricted
+
+# Non-interactive / CI
+ust-agent --auto-approve "Add type hints to all public functions in src/"
+```
+
+### What happens in a session
+
+```
+╔══════════════════════════════════════════════════════╗
+║          UST Coding Agent  —  interactive            ║
+║  Type your task. 'exit' or Ctrl+C to quit.          ║
+╚══════════════════════════════════════════════════════╝
+  session  : a3f2...
+  data class: internal
+  directory : /Users/you/projects/my-service
+  resume   : ust-agent --session a3f2...
+
+▶ Add input validation to the payment processor
+
+  ⚠  write_file
+     write → src/payments/processor.py  (84 lines)
+  Approve? [Y/n]
+
+[agent writes the file, runs the tests, reports results]
+
+▶ Now write tests for it
+...
+```
+
+For every task the agent:
+1. Calls `retrieve_knowledge_tool` to find relevant UST prior patterns
+2. Reads your existing files with `read_file` / `glob` / `grep`
+3. Writes or edits code — pausing for your approval before touching the filesystem
+4. Runs `execute` to verify (tests, linters) — again with approval
+5. Cites the UST pattern used at the top of any new file
+
+Session history is kept in memory across turns (LangGraph `MemorySaver`), so
+follow-up tasks share full context. Use `--session` to reload a thread after
+restarting the process (note: in-memory only — history is lost on process exit
+unless you add a persistent checkpointer).
+
+---
+
 ## Quick start
 
 ### Prerequisites
