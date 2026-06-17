@@ -93,8 +93,21 @@ if command -v docker &>/dev/null; then
   if docker info &>/dev/null; then
     ok "Docker  $(docker --version | cut -d' ' -f3 | tr -d ',')"
   else
-    fail "Docker is installed but the daemon is not running — start Docker Desktop"
-    (( ERRORS++ ))
+    info "Docker daemon not running — starting Docker Desktop..."
+    open -a Docker 2>/dev/null || true
+    RETRIES=0
+    until docker info &>/dev/null; do
+      RETRIES=$(( RETRIES + 1 ))
+      if [[ "$RETRIES" -ge 30 ]]; then
+        fail "Docker daemon did not start after 60s — open Docker Desktop manually and re-run"
+        (( ERRORS++ ))
+        break
+      fi
+      sleep 2
+    done
+    if docker info &>/dev/null; then
+      ok "Docker  $(docker --version | cut -d' ' -f3 | tr -d ',')  (just started)"
+    fi
   fi
 else
   fail "docker not found — install Docker Desktop"
