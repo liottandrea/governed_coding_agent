@@ -203,10 +203,10 @@ fi
 
 # Install ust-agent as a global tool (editable) so it's on $PATH from any directory.
 # uv tool install is idempotent — re-running is always safe.
-if uv tool install --editable "$SCRIPT_DIR" --quiet 2>/dev/null; then
-  ok "ust-agent installed globally  (uv tool install -e .)"
+if uv tool install --editable "$SCRIPT_DIR" --reinstall --quiet 2>/dev/null; then
+  ok "ust-agent installed globally  (uv tool install -e . --reinstall)"
 else
-  warn "Could not install ust-agent globally — run: uv tool install -e . manually"
+  warn "Could not install ust-agent globally — run: uv tool install -e . --reinstall"
 fi
 
 # ── SECTION 3: Docker services ───────────────────────────────────────────────
