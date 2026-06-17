@@ -23,6 +23,7 @@ from langgraph.types import Command
 
 import deepagents
 from deepagents import CompiledSubAgent
+from deepagents.backends import LocalShellBackend
 
 from ust_agent.gateway import resolve_model
 from ust_agent import observability
@@ -49,6 +50,7 @@ def build_agent(
     extra_tools: list | None = None,
     subagents: list | None = None,
     system_prompt: str | None = None,
+    cwd: os.PathLike | str | None = None,
     **deepagents_kwargs: Any,
 ) -> CompiledSubAgent:
     """Build and return the top-level UST orchestrator agent.
@@ -70,6 +72,11 @@ def build_agent(
 
     _checkpointer = checkpointer or MemorySaver()
 
+    backend = LocalShellBackend(
+        root_dir=cwd or os.getcwd(),
+        inherit_env=True,  # inherit RTK-patched PATH and all env vars
+    )
+
     agent = deepagents.create_deep_agent(
         model=model,
         system_prompt=system_prompt or _SYSTEM_PROMPT,
@@ -77,6 +84,7 @@ def build_agent(
         subagents=subagents or [],
         interrupt_on=_INTERRUPT_TOOLS,
         checkpointer=_checkpointer,
+        backend=backend,
         **deepagents_kwargs,
     )
     return agent

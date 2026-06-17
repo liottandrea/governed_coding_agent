@@ -145,6 +145,7 @@ def _build_agent(
         extra_tools=extra_tools,
         system_prompt=system_prompt,
         checkpointer=checkpointer,
+        cwd=cwd,
     )
 
 
