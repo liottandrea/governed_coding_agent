@@ -40,7 +40,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.types import Command
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=os.getenv("UST_AGENT_LOG_LEVEL", "WARNING").upper())
 logger = logging.getLogger(__name__)
 
 # Resolve the agent install root: UST_AGENT_HOME > package-relative (editable install)
@@ -52,9 +52,11 @@ _BANNER = """\
 ║  Type your task. 'exit' or Ctrl+C to quit.          ║
 ╚══════════════════════════════════════════════════════╝"""
 
-_SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT_TEMPLATE = """\
 You are the UST Coding Agent — an expert coding assistant for UST delivery \
 projects. You work directly inside the developer's project directory.
+
+Current working directory: {cwd}
 
 Your capabilities:
 - read_file / write_file / edit_file / ls / glob / grep  — full filesystem access
@@ -69,6 +71,16 @@ relevant UST patterns, then ground your implementation in them.
 Google docstrings, dataclasses, pathlib, snake_case, specific exceptions).
 4. Always verify your work: run tests or execute the changed code.
 5. Cite the UST pattern you used in a brief comment at the top of new files.
+
+Filesystem rules:
+- ALWAYS start exploration from the current working directory ({cwd}), never from /.
+- Use `ls {cwd}` or `ls .` as your first step when exploring the project.
+- All relative paths are relative to {cwd}.
+
+Shell commands:
+- If `rtk` is on PATH, prefix read-heavy commands with it for efficiency: \
+`rtk git status`, `rtk grep -r ...`, `rtk find ...` etc.
+- Check with `which rtk` before assuming it is available.
 
 Be direct. Work in the actual project directory. Do not ask clarifying questions \
 unless the task is genuinely ambiguous — make a sensible assumption and proceed.
@@ -94,16 +106,18 @@ def _build_agent(
     role: str,
     include_knowledge: bool,
     checkpointer: PostgresSaver,
+    cwd: Path,
 ) -> object:
     from ust_agent.harness import build_agent
     from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
 
+    system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(cwd=cwd)
     extra_tools = [retrieve_knowledge_tool] if include_knowledge else []
     return build_agent(
         role=role,
         data_class=data_class,
         extra_tools=extra_tools,
-        system_prompt=_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
         checkpointer=checkpointer,
     )
 
@@ -316,6 +330,7 @@ def main(argv: list[str] | None = None) -> None:
             role=args.role,
             include_knowledge=not args.no_knowledge,
             checkpointer=checkpointer,
+            cwd=cwd,
         )
 
         if args.task:
