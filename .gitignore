@@ -30,3 +30,4 @@ venv/
 # Project runtime
 *.log
 pgdata/
+.headroom/

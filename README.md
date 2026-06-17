@@ -97,21 +97,44 @@ are created automatically on first run via `checkpointer.setup()`.
 
 ## Quick start
 
-### Prerequisites
-
-| Tool | Version |
-|------|---------|
-| Python | ≥ 3.12 |
-| [uv](https://docs.astral.sh/uv/) | any recent |
-| Docker + Compose | for Postgres + Langfuse |
-| AWS CLI | configured with a Bedrock-capable profile |
+### One-command startup
 
 ```bash
-# Clone and enter the repo
-git clone <repo-url>
-cd ust_coding_agent
+git clone <repo-url> && cd ust_coding_agent
+cp .env.example .env          # fill in AWS_PROFILE at minimum
+./start.sh                    # checks prerequisites, starts everything, seeds DB
+ust-agent                     # open the interactive REPL
+```
 
-# Copy and fill in your secrets (see "Environment variables" below)
+`start.sh` is idempotent — safe to re-run at any time. It:
+1. Checks all prerequisites (Docker, uv, Python ≥ 3.12, AWS profile, `.env`)
+2. Runs `uv sync` to install Python dependencies
+3. Starts Docker services (Postgres + Langfuse) and waits for health
+4. Initialises the pgvector schema and ingests the seed knowledge corpus
+5. Launches the Headroom proxy on `:8787` (if installed)
+6. Prints the ready summary with all service URLs
+
+```bash
+./start.sh --check    # prerequisite check only, no side effects
+./start.sh --status   # show what's running right now
+./start.sh --stop     # stop Docker services and Headroom proxy
+```
+
+### Prerequisites
+
+| Tool | Required | Notes |
+|------|----------|-------|
+| Python | ≥ 3.12 | via system or pyenv |
+| [uv](https://docs.astral.sh/uv/) | yes | dependency manager + entry points |
+| Docker + Compose v2 | yes | for Postgres/pgvector + Langfuse |
+| AWS CLI + profile | yes | Bedrock-capable IAM profile |
+| [RTK](https://github.com/rtk-ai/rtk) | optional | terminal token compression |
+| [Headroom](https://github.com/chopratejas/headroom) | optional | proxy compression |
+
+### Manual setup (if you prefer step-by-step)
+
+```bash
+# Copy and fill in secrets
 cp .env.example .env
 
 # Start Postgres (pgvector) + Langfuse
