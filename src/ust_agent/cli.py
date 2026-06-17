@@ -30,8 +30,12 @@ Flags:
 from __future__ import annotations
 
 import argparse
+import atexit
 import logging
 import os
+import shutil
+import stat
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -45,6 +49,33 @@ logger = logging.getLogger(__name__)
 
 # Resolve the agent install root: UST_AGENT_HOME > package-relative (editable install)
 _AGENT_HOME = Path(os.getenv("UST_AGENT_HOME", Path(__file__).parent.parent.parent))
+
+# Commands that benefit from RTK's output compression.
+_RTK_COMMANDS = [
+    "git", "grep", "rg", "ag", "find", "ls", "cat", "head", "tail",
+    "diff", "wc", "du", "df", "ps", "env", "printenv",
+]
+
+
+def _setup_rtk_path() -> str | None:
+    """Prepend a temp dir of RTK wrapper scripts to PATH.
+
+    Each wrapper is a one-liner: `exec rtk <cmd> "$@"`.
+    This enforces RTK for every shell command the agent runs via execute,
+    regardless of what it writes in the command string.
+    Returns the temp dir path, or None if rtk is not installed.
+    """
+    if not shutil.which("rtk"):
+        return None
+    tmpdir = tempfile.mkdtemp(prefix="ust-agent-rtk-")
+    for cmd in _RTK_COMMANDS:
+        wrapper = Path(tmpdir) / cmd
+        wrapper.write_text(f"#!/bin/sh\nexec rtk {cmd} \"$@\"\n")
+        wrapper.chmod(wrapper.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    os.environ["PATH"] = f"{tmpdir}:{os.environ.get('PATH', '')}"
+    atexit.register(shutil.rmtree, tmpdir, ignore_errors=True)
+    return tmpdir
+
 
 _BANNER = """\
 ╔══════════════════════════════════════════════════════╗
@@ -76,11 +107,6 @@ Filesystem rules:
 - ALWAYS start exploration from the current working directory ({cwd}), never from /.
 - Use `ls {cwd}` or `ls .` as your first step when exploring the project.
 - All relative paths are relative to {cwd}.
-
-Shell commands:
-- If `rtk` is on PATH, prefix read-heavy commands with it for efficiency: \
-`rtk git status`, `rtk grep -r ...`, `rtk find ...` etc.
-- Check with `which rtk` before assuming it is available.
 
 Be direct. Work in the actual project directory. Do not ask clarifying questions \
 unless the task is genuinely ambiguous — make a sensible assumption and proceed.
@@ -195,6 +221,7 @@ def _repl(
     auto_approve: bool,
     data_class: str,
     cwd: Path,
+    rtk_active: bool = False,
 ) -> None:
     thread_cfg = {"configurable": {"thread_id": thread_id}}
     approved_actions: list = []
@@ -203,6 +230,7 @@ def _repl(
     print(f"  session   : {thread_id}")
     print(f"  data class: {data_class}")
     print(f"  directory : {cwd}")
+    print(f"  rtk       : {'active — shell commands compressed' if rtk_active else 'not found (install rtk for token savings)'}")
     print(f"  resume    : ust-agent --session {thread_id}")
     print(f"  history   : persisted in Postgres\n")
 
@@ -261,6 +289,7 @@ def _list_sessions(checkpointer: PostgresSaver) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     load_dotenv(_AGENT_HOME / ".env")
+    rtk_dir = _setup_rtk_path()
 
     parser = argparse.ArgumentParser(
         prog="ust-agent",
@@ -341,7 +370,7 @@ def main(argv: list[str] | None = None) -> None:
             )
             print(response)
         else:
-            _repl(agent, thread_id, args.auto_approve, args.data_class, cwd)
+            _repl(agent, thread_id, args.auto_approve, args.data_class, cwd, rtk_active=rtk_dir is not None)
 
 
 if __name__ == "__main__":
