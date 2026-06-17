@@ -16,7 +16,8 @@ class PolicyError(Exception):
     """Raised when a routing decision violates the data-class policy."""
 
 
-_CONFIG_PATH = Path(os.getenv("POLICY_CONFIG_PATH", "config/data-classes.yaml"))
+_AGENT_HOME = Path(os.getenv("UST_AGENT_HOME", Path(__file__).parent.parent.parent))
+_CONFIG_PATH = Path(os.getenv("POLICY_CONFIG_PATH", _AGENT_HOME / "config/data-classes.yaml"))
 
 
 def _load_policy(path: Path = _CONFIG_PATH) -> dict[str, Any]:

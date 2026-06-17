@@ -43,6 +43,9 @@ from langgraph.types import Command
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
+# Resolve the agent install root: UST_AGENT_HOME > package-relative (editable install)
+_AGENT_HOME = Path(os.getenv("UST_AGENT_HOME", Path(__file__).parent.parent.parent))
+
 _BANNER = """\
 ╔══════════════════════════════════════════════════════╗
 ║          UST Coding Agent  —  interactive            ║
@@ -243,7 +246,7 @@ def _list_sessions(checkpointer: PostgresSaver) -> None:
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main(argv: list[str] | None = None) -> None:
-    load_dotenv()
+    load_dotenv(_AGENT_HOME / ".env")
 
     parser = argparse.ArgumentParser(
         prog="ust-agent",

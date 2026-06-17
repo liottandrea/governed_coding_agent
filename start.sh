@@ -188,6 +188,14 @@ else
   ok "uv sync  complete"
 fi
 
+# Install ust-agent as a global tool (editable) so it's on $PATH from any directory.
+# uv tool install is idempotent — re-running is always safe.
+if uv tool install --editable "$SCRIPT_DIR" --quiet 2>/dev/null; then
+  ok "ust-agent installed globally  (uv tool install -e .)"
+else
+  warn "Could not install ust-agent globally — run: uv tool install -e . manually"
+fi
+
 # ── SECTION 3: Docker services ───────────────────────────────────────────────
 banner "3 / 5  Docker services  (Postgres + Langfuse)"
 docker compose up -d

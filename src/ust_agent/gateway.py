@@ -35,8 +35,9 @@ from ust_agent import policy
 logger = logging.getLogger(__name__)
 
 
-_ROUTING_CONFIG = Path(os.getenv("ROUTING_CONFIG_PATH", "config/routing-rules.yaml"))
-_LITELLM_CONFIG = Path(os.getenv("LITELLM_CONFIG_PATH", "config/litellm.config.yaml"))
+_AGENT_HOME = Path(os.getenv("UST_AGENT_HOME", Path(__file__).parent.parent.parent))
+_ROUTING_CONFIG = Path(os.getenv("ROUTING_CONFIG_PATH", _AGENT_HOME / "config/routing-rules.yaml"))
+_LITELLM_CONFIG = Path(os.getenv("LITELLM_CONFIG_PATH", _AGENT_HOME / "config/litellm.config.yaml"))
 
 # Ensure the AWS profile is set for all litellm calls in this process.
 os.environ.setdefault("AWS_PROFILE", os.getenv("AWS_PROFILE", "genai-agent-user"))

@@ -17,7 +17,78 @@ sensitive code from ever reaching an external API.
 ## Using as a coding assistant
 
 `ust-agent` is a terminal-based coding assistant — a governed, knowledge-grounded
-alternative to Claude Code. Run it inside any project directory.
+alternative to Claude Code. Once installed, run it from **any project directory**
+on your machine, not just inside this repo.
+
+### One-time global install
+
+`start.sh` handles this automatically. To do it manually:
+
+```bash
+cd ~/code/ust_coding_agent
+uv tool install -e .        # editable: config files stay in this repo
+```
+
+`ust-agent` is then on `$PATH` via uv's tool shims (`~/.local/bin/ust-agent`).
+Make sure `~/.local/bin` is in your `PATH` (uv prints a reminder if it isn't).
+
+### Daily workflow
+
+```bash
+# 1. Start shared services once per day (from this repo)
+cd ~/code/ust_coding_agent
+./start.sh
+
+# 2. Go to any project and work
+cd ~/code/my-client-service
+ust-agent                                       # interactive REPL
+ust-agent "Add type hints to all public functions in src/"   # single-shot
+ust-agent --data-class restricted               # local models only
+```
+
+The agent reads and writes files in your **current working directory**. The
+shared services (Postgres, Langfuse, knowledge store, models) are centralised in
+the `ust_coding_agent` installation — they don't need to be present in each repo.
+
+### Adding a repo's patterns to the knowledge store
+
+The pgvector knowledge store is shared across all projects. Ingest patterns from
+any repo so the agent can reference them from other projects:
+
+```bash
+# Quick: drop a file into seed/ and re-ingest (idempotent)
+cp ~/code/my-service/src/retry.py seed/
+uv run python -c "
+from ust_agent.knowledge.ingest import ingest_seed
+print(ingest_seed(), 'chunks ingested')
+"
+
+# Targeted: ingest a specific file without copying it
+uv run python -c "
+from ust_agent.knowledge.ingest import chunk_python_file, load_chunks
+from pathlib import Path
+src = Path('../my-service/src/auth.py').read_text()
+chunks = chunk_python_file(src, path='auth.py', repo='my-service')
+load_chunks(chunks, data_class='internal')
+print(len(chunks), 'chunks ingested')
+"
+```
+
+Once ingested, `retrieve_knowledge_tool` will surface those patterns for any
+future task in any repo.
+
+### Confidential repos
+
+```bash
+cd ~/code/regulated-project
+ust-agent --data-class restricted
+```
+
+`restricted` routes exclusively to local Ollama — nothing leaves the machine.
+No Bedrock calls, no external telemetry beyond what's running on localhost.
+
+---
+
 
 ```bash
 # Interactive REPL (like running `claude`)
