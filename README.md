@@ -25,7 +25,7 @@ on your machine, not just inside this repo.
 `start.sh` handles this automatically. To do it manually:
 
 ```bash
-cd ~/code/ust_coding_agent
+cd ~/Documents/repos/ust_coding_agent
 uv tool install -e .        # editable: config files stay in this repo
 ```
 
@@ -36,11 +36,11 @@ Make sure `~/.local/bin` is in your `PATH` (uv prints a reminder if it isn't).
 
 ```bash
 # 1. Start shared services once per day (from this repo)
-cd ~/code/ust_coding_agent
+cd ~/Documents/repos/ust_coding_agent
 ./start.sh
 
 # 2. Go to any project and work
-cd ~/code/my-client-service
+cd ~/Documents/repos/my-client-service
 ust-agent                                       # interactive REPL
 ust-agent "Add type hints to all public functions in src/"   # single-shot
 ust-agent --data-class restricted               # local models only
@@ -57,7 +57,7 @@ any repo so the agent can reference them from other projects:
 
 ```bash
 # Quick: drop a file into seed/ and re-ingest (idempotent)
-cp ~/code/my-service/src/retry.py seed/
+cp ~/Documents/repos/my-service/src/retry.py seed/
 uv run python -c "
 from ust_agent.knowledge.ingest import ingest_seed
 print(ingest_seed(), 'chunks ingested')
@@ -67,7 +67,7 @@ print(ingest_seed(), 'chunks ingested')
 uv run python -c "
 from ust_agent.knowledge.ingest import chunk_python_file, load_chunks
 from pathlib import Path
-src = Path('../my-service/src/auth.py').read_text()
+src = Path('../my-service/src/auth.py').read_text()  # or absolute path
 chunks = chunk_python_file(src, path='auth.py', repo='my-service')
 load_chunks(chunks, data_class='internal')
 print(len(chunks), 'chunks ingested')
@@ -80,7 +80,7 @@ future task in any repo.
 ### Confidential repos
 
 ```bash
-cd ~/code/regulated-project
+cd ~/Documents/repos/regulated-project
 ust-agent --data-class restricted
 ```
 
