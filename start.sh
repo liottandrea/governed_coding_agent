@@ -201,8 +201,12 @@ else
   ok "uv sync  complete"
 fi
 
+# Touch source files so Python's .pyc cache never silently serves stale bytecode.
+touch "$SCRIPT_DIR"/src/ust_agent/*.py "$SCRIPT_DIR"/src/ust_agent/**/*.py 2>/dev/null || true
+find "$SCRIPT_DIR/src/ust_agent" -name "*.pyc" -delete 2>/dev/null || true
+
 # Install ust-agent as a global tool (editable) so it's on $PATH from any directory.
-# uv tool install is idempotent — re-running is always safe.
+# --reinstall ensures updates are always picked up.
 if uv tool install --editable "$SCRIPT_DIR" --reinstall --quiet 2>/dev/null; then
   ok "ust-agent installed globally  (uv tool install -e . --reinstall)"
 else
