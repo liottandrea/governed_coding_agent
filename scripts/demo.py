@@ -164,7 +164,7 @@ def main() -> None:
     testing  →  cheap → mid cascade  (Haiku, Sonnet fallback)
 
   All model calls routed through LiteLLM gateway.
-  All steps traced to Langfuse (http://localhost:3000).
+  All steps traced to Langfuse (http://localhost:13000).
   Data class: internal — policy enforced, never leaves Bedrock.
 """)
     banner("DONE", char="═")

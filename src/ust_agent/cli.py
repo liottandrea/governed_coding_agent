@@ -133,6 +133,7 @@ def _build_agent(
     include_knowledge: bool,
     checkpointer: PostgresSaver,
     cwd: Path,
+    session_id: str,
 ) -> object:
     from ust_agent.harness import build_agent
     from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
@@ -146,6 +147,7 @@ def _build_agent(
         system_prompt=system_prompt,
         checkpointer=checkpointer,
         cwd=cwd,
+        session_id=session_id,
     )
 
 
@@ -372,12 +374,8 @@ def main(argv: list[str] | None = None) -> None:
             include_knowledge=not args.no_knowledge,
             checkpointer=checkpointer,
             cwd=cwd,
+            session_id=thread_id,
         )
-
-        # Tag every LiteLLM call with the session_id so Langfuse groups
-        # all traces from this session under one Session view.
-        import litellm
-        litellm.metadata = {"session_id": thread_id}
 
         if args.task:
             thread_cfg = {"configurable": {"thread_id": thread_id}}

@@ -132,7 +132,7 @@ print("  PASS: Testing agent completed with write_file approval")
 section("7. Langfuse trace check")
 import httpx
 
-LANGFUSE_URL = os.getenv("LANGFUSE_BASEURL", "http://localhost:3000")
+LANGFUSE_URL = os.getenv("LANGFUSE_BASEURL", "http://localhost:13000")
 PK = os.getenv("LANGFUSE_PUBLIC_KEY", "")
 SK = os.getenv("LANGFUSE_SECRET_KEY", "")
 

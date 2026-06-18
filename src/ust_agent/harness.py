@@ -43,6 +43,31 @@ _SYSTEM_PROMPT = (
 _INTERRUPT_TOOLS = {"write_file": True, "execute": True}
 
 
+def _inject_session_id(model: Any, session_id: str) -> None:
+    """Stamp session_id into the model's metadata so Langfuse groups traces.
+
+    ChatLiteLLM passes model_kwargs as extra kwargs to litellm.completion().
+    litellm.completion(metadata={"session_id": ...}) flows through to
+    litellm_params["metadata"] which the Langfuse integration reads.
+    For CascadingChatModel we stamp both primary and fallback.
+    """
+    from ust_agent.gateway import CascadingChatModel
+    from langchain_litellm import ChatLiteLLM
+
+    def _stamp(m: ChatLiteLLM) -> None:
+        existing = dict(m.model_kwargs or {})
+        meta = dict(existing.get("metadata") or {})
+        meta["session_id"] = session_id
+        existing["metadata"] = meta
+        m.model_kwargs = existing
+
+    if isinstance(model, CascadingChatModel):
+        _stamp(model.primary)
+        _stamp(model.fallback)
+    elif isinstance(model, ChatLiteLLM):
+        _stamp(model)
+
+
 def build_agent(
     role: str = "planner",
     data_class: str | None = None,
@@ -51,6 +76,7 @@ def build_agent(
     subagents: list | None = None,
     system_prompt: str | None = None,
     cwd: os.PathLike | str | None = None,
+    session_id: str | None = None,
     **deepagents_kwargs: Any,
 ) -> CompiledSubAgent:
     """Build and return the top-level UST orchestrator agent.
@@ -63,12 +89,18 @@ def build_agent(
 
     Args:
         system_prompt: Override the default system prompt (used by the CLI).
+        session_id: LangGraph thread_id; stamped into model_kwargs so every
+            litellm.completion() call carries metadata["session_id"] and
+            Langfuse groups all traces under one Session.
     """
     load_dotenv()
     observability.configure()
 
     effective_data_class = data_class or os.getenv("DEFAULT_DATA_CLASS", "internal")
     model = resolve_model(role, effective_data_class)
+
+    if session_id:
+        _inject_session_id(model, session_id)
 
     _checkpointer = checkpointer or MemorySaver()
 

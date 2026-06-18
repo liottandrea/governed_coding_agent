@@ -107,7 +107,7 @@ def test_observability_configure_registers_langfuse_callback() -> None:
     with patch.dict(os.environ, {
         "LANGFUSE_PUBLIC_KEY": "pk-test",
         "LANGFUSE_SECRET_KEY": "sk-test",
-        "LANGFUSE_HOST": "http://localhost:3000",
+        "LANGFUSE_HOST": "http://localhost:13000",
     }):
         obs.configure()
 

@@ -134,15 +134,26 @@ class CascadingChatModel(BaseChatModel):
         return bound_primary.with_fallbacks([bound_fallback])
 
 
-def resolve_group(role: str, routing_path: Path = _ROUTING_CONFIG) -> str:
-    """Return the primary model group name for a given role."""
+def resolve_group(
+    role: str,
+    routing_path: Path = _ROUTING_CONFIG,
+    data_class: str | None = None,
+) -> str:
+    """Return the model group for a given role, respecting data_class constraints.
+
+    When data_class is 'restricted', uses restricted_group if defined so the
+    role automatically routes to a local model without raising a PolicyError.
+    """
     routing = _load_routing(routing_path)
     roles: dict[str, Any] = routing.get("roles", {})
     if role not in roles:
         raise ValueError(
             f"Unknown role '{role}'. Known roles: {list(roles.keys())}"
         )
-    return roles[role]["default_group"]
+    role_cfg = roles[role]
+    if data_class == "restricted" and "restricted_group" in role_cfg:
+        return role_cfg["restricted_group"]
+    return role_cfg["default_group"]
 
 
 def resolve_fallback_group(
@@ -190,7 +201,7 @@ def resolve_model(
 
     Raises policy.PolicyError if the primary combination is forbidden.
     """
-    group = resolve_group(role, routing_path)
+    group = resolve_group(role, routing_path, data_class=data_class)
 
     if policy_path is not None:
         policy.check(data_class, group, policy_path)

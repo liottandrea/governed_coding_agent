@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ust_agent
       POSTGRES_PASSWORD: changeme
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,12 +23,12 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - "13000:3000"
     environment:
       DATABASE_URL: postgresql://ust_agent:changeme@postgres:5432/ust_agent
       NEXTAUTH_SECRET: changeme-nextauth-secret
       SALT: changeme-salt
-      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:13000
       TELEMETRY_ENABLED: "false"
       LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
       # Seed a default org/project/user on first boot so CI and local dev

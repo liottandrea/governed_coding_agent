@@ -182,7 +182,7 @@ ust-agent                     # open the interactive REPL
 2. Runs `uv sync` to install Python dependencies
 3. Starts Docker services (Postgres + Langfuse) and waits for health
 4. Initialises the pgvector schema and ingests the seed knowledge corpus
-5. Launches the Headroom proxy on `:8787` (if installed)
+5. Launches the Headroom proxy on `:18787` (if installed)
 6. Prints the ready summary with all service URLs
 
 ```bash
@@ -425,7 +425,7 @@ demo.py / your code
               └─ execute (pytest) ────────────────────────────── HITL gate
 ```
 
-All model calls emit traces to Langfuse at `http://localhost:3000`.
+All model calls emit traces to Langfuse at `http://localhost:13000`.
 
 ---
 
@@ -439,19 +439,19 @@ Copy `.env.example` to `.env` and set:
 | `AWS_DEFAULT_REGION` | yes | Bedrock region (`us-east-1`) |
 | `LANGFUSE_PUBLIC_KEY` | yes | From Langfuse → Settings → API Keys |
 | `LANGFUSE_SECRET_KEY` | yes | From Langfuse → Settings → API Keys |
-| `LANGFUSE_HOST` | yes | `http://localhost:3000` for local docker |
+| `LANGFUSE_HOST` | yes | `http://localhost:13000` for local docker |
 | `POSTGRES_*` | yes | Match values in `docker-compose.yml` |
 | `OLLAMA_BASE_URL` | no | Only needed for local/restricted routing |
 | `DEFAULT_DATA_CLASS` | no | `internal` (default) |
 
 Langfuse keys are seeded automatically by docker-compose. Retrieve them from
-`http://localhost:3000` → Settings → API Keys after first `docker compose up -d`.
+`http://localhost:13000` → Settings → API Keys after first `docker compose up -d`.
 
 ---
 
 ## Observability
 
-Every run is traced. Open `http://localhost:3000` with:
+Every run is traced. Open `http://localhost:13000` with:
 
 ```
 email:    admin@ust-agent.local

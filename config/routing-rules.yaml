@@ -5,25 +5,31 @@
 roles:
   planner:
     default_group: mid
+    restricted_group: local_standard
     description: "Orchestrator planning and task decomposition"
 
   codegen:
     default_group: frontier
+    restricted_group: local_standard
     description: "Code authoring and generation"
 
   knowledge_retrieval:
     default_group: mid
+    restricted_group: local_standard
     description: "Knowledge sub-agent reasoning over retrieved context"
 
   embedding:
     default_group: cheap
+    restricted_group: local_fast
     description: "Chunk embedding during knowledge ingest"
 
   summary:
     default_group: cheap
+    restricted_group: local_fast
     description: "Summarisation and low-stakes synthesis"
 
   testing:
     default_group: cheap
-    description: "Test generation (Phase 5)"
+    restricted_group: local_fast
     fallback_group: mid
+    description: "Test generation (Phase 5)"

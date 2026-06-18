@@ -50,20 +50,20 @@ if [[ "$MODE" == "status" ]]; then
   echo ""
   docker compose ps 2>/dev/null || warn "docker compose not available"
   echo ""
-  if curl -sf http://localhost:8787/health >/dev/null 2>&1; then
-    VERSION=$(curl -sf http://localhost:8787/health | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "?")
-    ok "Headroom proxy  http://localhost:8787  (v${VERSION})"
+  if curl -sf http://localhost:18787/health >/dev/null 2>&1; then
+    VERSION=$(curl -sf http://localhost:18787/health | python3 -c "import sys,json; print(json.load(sys.stdin)['version'])" 2>/dev/null || echo "?")
+    ok "Headroom proxy  http://localhost:18787  (v${VERSION})"
   else
     warn "Headroom proxy  not running"
   fi
-  if curl -sf http://localhost:3000/api/public/health >/dev/null 2>&1; then
-    ok "Langfuse        http://localhost:3000"
+  if curl -sf http://localhost:13000/api/public/health >/dev/null 2>&1; then
+    ok "Langfuse        http://localhost:13000"
   else
     warn "Langfuse        not responding"
   fi
   PG_OK=$(docker compose exec -T postgres pg_isready -U ust_agent -d ust_agent 2>/dev/null | grep "accepting" || true)
   if [[ -n "$PG_OK" ]]; then
-    ok "Postgres        localhost:5432"
+    ok "Postgres        localhost:15432"
   else
     warn "Postgres        not ready"
   fi
@@ -179,7 +179,7 @@ LF_SK="${LANGFUSE_SECRET_KEY:-}"
 if [[ -z "$LF_PK" || -z "$LF_SK" ]]; then
   warn "LANGFUSE_PUBLIC_KEY / SECRET_KEY not set in .env"
   warn "  They will be seeded automatically by docker-compose."
-  warn "  After first boot, copy from http://localhost:3000 → Settings → API Keys"
+  warn "  After first boot, copy from http://localhost:13000 → Settings → API Keys"
 fi
 
 # Hard stop if critical prerequisites are missing
@@ -231,7 +231,7 @@ ok "Postgres  ready"
 
 info "Waiting for Langfuse to be ready..."
 RETRIES=0
-until curl -sf http://localhost:3000/api/public/health &>/dev/null; do
+until curl -sf http://localhost:13000/api/public/health &>/dev/null; do
   RETRIES=$(( RETRIES + 1 ))
   if [[ "$RETRIES" -ge 45 ]]; then
     warn "Langfuse not responding after 90s — continuing anyway"
@@ -239,8 +239,8 @@ until curl -sf http://localhost:3000/api/public/health &>/dev/null; do
   fi
   sleep 2
 done
-if curl -sf http://localhost:3000/api/public/health &>/dev/null; then
-  ok "Langfuse  ready  →  http://localhost:3000"
+if curl -sf http://localhost:13000/api/public/health &>/dev/null; then
+  ok "Langfuse  ready  →  http://localhost:13000"
 fi
 
 # ── SECTION 4: Database initialisation ───────────────────────────────────────
@@ -262,7 +262,7 @@ fi
 
 # ── SECTION 5: Headroom proxy ─────────────────────────────────────────────────
 banner "5 / 5  Headroom proxy"
-HEADROOM_PORT="${HEADROOM_PORT:-8787}"
+HEADROOM_PORT="${HEADROOM_PORT:-18787}"
 
 if curl -sf "http://localhost:${HEADROOM_PORT}/livez" &>/dev/null; then
   ok "Headroom already running on port ${HEADROOM_PORT}"
@@ -306,7 +306,7 @@ echo -e "  ${BOLD}Run the demo:${RESET}"
 echo -e "    uv run python scripts/demo.py"
 echo ""
 echo -e "  ${BOLD}Observability:${RESET}"
-echo -e "    Langfuse  →  http://localhost:3000  (admin@ust-agent.local / UstAgent2024!)"
+echo -e "    Langfuse  →  http://localhost:13000  (admin@ust-agent.local / UstAgent2024!)"
 if curl -sf "http://localhost:${HEADROOM_PORT}/livez" &>/dev/null; then
   echo -e "    Headroom  →  http://localhost:${HEADROOM_PORT}/stats"
 fi

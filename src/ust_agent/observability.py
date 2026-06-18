@@ -10,7 +10,7 @@ surface minimal and lets LiteLLM own the span lifecycle.
 Required env vars:
     LANGFUSE_PUBLIC_KEY   — Langfuse project public key
     LANGFUSE_SECRET_KEY   — Langfuse project secret key
-    LANGFUSE_HOST         — e.g. http://localhost:3000 (default)
+    LANGFUSE_HOST         — e.g. http://localhost:13000 (default)
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def configure() -> None:
     if _configured:
         return
 
-    host = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
+    host = os.getenv("LANGFUSE_HOST", "http://localhost:13000")
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY", "")
     secret_key = os.getenv("LANGFUSE_SECRET_KEY", "")
 
@@ -57,5 +57,5 @@ def configure() -> None:
 
 def trace_url(trace_id: str) -> str:
     """Return the Langfuse UI URL for a trace ID."""
-    host = os.getenv("LANGFUSE_HOST", "http://localhost:3000")
+    host = os.getenv("LANGFUSE_HOST", "http://localhost:13000")
     return f"{host}/trace/{trace_id}"
