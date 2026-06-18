@@ -374,6 +374,11 @@ def main(argv: list[str] | None = None) -> None:
             cwd=cwd,
         )
 
+        # Tag every LiteLLM call with the session_id so Langfuse groups
+        # all traces from this session under one Session view.
+        import litellm
+        litellm.metadata = {"session_id": thread_id}
+
         if args.task:
             thread_cfg = {"configurable": {"thread_id": thread_id}}
             approved: list = []
