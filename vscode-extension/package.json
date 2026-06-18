@@ -1,0 +1,87 @@
+{
+  "name": "ust-coding-agent",
+  "displayName": "UST Coding Agent",
+  "description": "AI coding assistant powered by the UST Coding Agent (Bedrock + Ollama via LiteLLM)",
+  "version": "0.1.0",
+  "publisher": "ust",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ust-agent.openPanel",
+        "title": "UST Agent: Open Chat Panel"
+      },
+      {
+        "command": "ust-agent.newSession",
+        "title": "UST Agent: New Session"
+      },
+      {
+        "command": "ust-agent.refreshSessions",
+        "title": "UST Agent: Refresh Sessions",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ust-agent-sidebar",
+          "title": "UST Agent",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "ust-agent-sidebar": [
+        {
+          "id": "ust-agent.sessionView",
+          "name": "Sessions",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "ust-agent.refreshSessions",
+          "when": "view == ust-agent.sessionView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "UST Coding Agent",
+      "properties": {
+        "ustAgent.binaryPath": {
+          "type": "string",
+          "default": "ust-agent",
+          "description": "Path to the ust-agent binary (defaults to PATH lookup)"
+        },
+        "ustAgent.agentHome": {
+          "type": "string",
+          "default": "",
+          "description": "UST_AGENT_HOME directory (leave blank to auto-detect)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p tsconfig.json",
+    "watch": "tsc -watch -p tsconfig.json",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/vscode": "^1.125.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -77,6 +77,7 @@ def build_agent(
     system_prompt: str | None = None,
     cwd: os.PathLike | str | None = None,
     session_id: str | None = None,
+    group_overrides: dict[str, str] | None = None,
     **deepagents_kwargs: Any,
 ) -> CompiledSubAgent:
     """Build and return the top-level UST orchestrator agent.
@@ -97,7 +98,7 @@ def build_agent(
     observability.configure()
 
     effective_data_class = data_class or os.getenv("DEFAULT_DATA_CLASS", "internal")
-    model = resolve_model(role, effective_data_class)
+    model = resolve_model(role, effective_data_class, group_overrides=group_overrides)
 
     if session_id:
         _inject_session_id(model, session_id)

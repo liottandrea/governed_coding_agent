@@ -138,12 +138,16 @@ def resolve_group(
     role: str,
     routing_path: Path = _ROUTING_CONFIG,
     data_class: str | None = None,
+    group_overrides: dict[str, str] | None = None,
 ) -> str:
     """Return the model group for a given role, respecting data_class constraints.
 
+    group_overrides (from the VS Code UI) take precedence over routing config.
     When data_class is 'restricted', uses restricted_group if defined so the
     role automatically routes to a local model without raising a PolicyError.
     """
+    if group_overrides and role in group_overrides:
+        return group_overrides[role]
     routing = _load_routing(routing_path)
     roles: dict[str, Any] = routing.get("roles", {})
     if role not in roles:
@@ -190,6 +194,7 @@ def resolve_model(
     routing_path: Path = _ROUTING_CONFIG,
     litellm_config_path: Path = _LITELLM_CONFIG,
     policy_path: Path | None = None,
+    group_overrides: dict[str, str] | None = None,
     **extra_kwargs: Any,
 ) -> ChatLiteLLM:
     """Resolve role + data_class → policy-checked ChatLiteLLM instance.
@@ -201,7 +206,7 @@ def resolve_model(
 
     Raises policy.PolicyError if the primary combination is forbidden.
     """
-    group = resolve_group(role, routing_path, data_class=data_class)
+    group = resolve_group(role, routing_path, data_class=data_class, group_overrides=group_overrides)
 
     if policy_path is not None:
         policy.check(data_class, group, policy_path)

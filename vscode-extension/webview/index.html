@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'none'; style-src {{CSS_URI}} 'unsafe-inline'; script-src {{JS_URI}} 'unsafe-inline';" />
+  <link rel="stylesheet" href="{{CSS_URI}}" />
+  <title>UST Agent</title>
+</head>
+<body>
+
+<!-- ── Controls bar ──────────────────────────────────────────────────────── -->
+<div id="controls">
+  <div class="control-row">
+    <label>Data class
+      <select id="dataClass">
+        <option value="public">public</option>
+        <option value="internal" selected>internal</option>
+        <option value="restricted">restricted</option>
+      </select>
+    </label>
+    <label>Role
+      <select id="role">
+        <option value="planner" selected>planner</option>
+        <option value="codegen">codegen</option>
+      </select>
+    </label>
+    <label>Knowledge
+      <input type="checkbox" id="knowledge" checked />
+    </label>
+    <button id="btnNew" title="Start a new session">＋ New</button>
+  </div>
+  <div class="control-row">
+    <label>Planner model
+      <select id="plannerModel">
+        <option value="cheap">cheap (Haiku)</option>
+        <option value="mid" selected>mid (Sonnet)</option>
+        <option value="frontier">frontier (Sonnet 4.6)</option>
+        <option value="local_fast">local fast (phi4-mini)</option>
+        <option value="local_standard">local standard (devstral)</option>
+        <option value="local_heavy">local heavy (qwen 35B)</option>
+      </select>
+    </label>
+    <label>Subagent model
+      <select id="subagentModel">
+        <option value="cheap" selected>cheap (Haiku)</option>
+        <option value="mid">mid (Sonnet)</option>
+        <option value="frontier">frontier (Sonnet 4.6)</option>
+        <option value="local_fast">local fast (phi4-mini)</option>
+        <option value="local_standard">local standard (devstral)</option>
+        <option value="local_heavy">local heavy (qwen 35B)</option>
+      </select>
+    </label>
+  </div>
+  <details id="promptDetails">
+    <summary>Custom system prompt</summary>
+    <textarea id="systemPrompt" rows="4" placeholder="Leave blank to use the default system prompt…"></textarea>
+  </details>
+</div>
+
+<!-- ── Session indicator ──────────────────────────────────────────────────── -->
+<div id="sessionBar">
+  <span id="sessionId">No active session</span>
+  <a id="traceLink" href="#" style="display:none" target="_blank">🔍 View in Langfuse</a>
+</div>
+
+<!-- ── Chat area ─────────────────────────────────────────────────────────── -->
+<div id="chat"></div>
+
+<!-- ── Input area ────────────────────────────────────────────────────────── -->
+<div id="inputArea">
+  <textarea id="msgInput" rows="2" placeholder="Describe a coding task…"></textarea>
+  <button id="btnSend">Send</button>
+</div>
+
+<script src="{{JS_URI}}"></script>
+</body>
+</html>

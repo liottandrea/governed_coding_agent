@@ -396,8 +396,19 @@ def main(argv: list[str] | None = None) -> None:
         default=False,
         help="Disable UST knowledge store queries",
     )
+    parser.add_argument(
+        "--server",
+        action="store_true",
+        default=False,
+        help="Run in JSON-lines server mode (used by the VS Code extension)",
+    )
 
     args = parser.parse_args(argv)
+
+    if args.server:
+        from ust_agent.server import run_server
+        run_server()
+        return
 
     from ust_agent import observability
     observability.configure()
