@@ -260,10 +260,28 @@ def _repl(
 
 # ── Session listing ───────────────────────────────────────────────────────────
 
-def _list_sessions(checkpointer: PostgresSaver) -> None:
-    """Print recent sessions from the checkpoint store."""
+def _list_sessions(_checkpointer: PostgresSaver) -> None:
+    """Print recent sessions by querying the checkpoints table directly.
+
+    PostgresSaver.list(config=None) returns nothing in 3.x — the API requires
+    a thread config. We query Postgres directly instead, grouping by thread_id
+    and reading the latest checkpoint_id per thread (UUIDv7 → timestamp).
+    """
+    import psycopg
+
+    sql = """
+        SELECT
+            thread_id,
+            max(checkpoint_id)          AS latest_checkpoint,
+            max((metadata->>'step')::int) AS turns
+        FROM checkpoints
+        GROUP BY thread_id
+        ORDER BY latest_checkpoint DESC
+        LIMIT 20
+    """
     try:
-        rows = list(checkpointer.list(config=None, limit=20))
+        with psycopg.connect(_dsn()) as conn:
+            rows = conn.execute(sql).fetchall()
     except Exception as exc:
         print(f"Could not list sessions: {exc}")
         return
@@ -272,17 +290,10 @@ def _list_sessions(checkpointer: PostgresSaver) -> None:
         print("No saved sessions found.")
         return
 
-    seen: set[str] = set()
-    print(f"\n{'Thread ID':<38}  {'Created':<20}  Turns")
-    print("─" * 66)
-    for cp in rows:
-        tid = cp.config["configurable"]["thread_id"]
-        if tid in seen:
-            continue
-        seen.add(tid)
-        ts = str(cp.metadata.get("created_at", ""))[:19]
-        step = cp.metadata.get("step", "?")
-        print(f"  {tid:<36}  {ts:<20}  {step}")
+    print(f"\n{'Thread ID':<38}  Turns")
+    print("─" * 48)
+    for thread_id, _latest_cp, turns in rows:
+        print(f"  {thread_id:<36}  {turns or '?'}")
     print(f"\nResume: ust-agent --session <thread-id>\n")
 
 
