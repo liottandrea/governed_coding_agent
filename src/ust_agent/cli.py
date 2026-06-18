@@ -33,6 +33,7 @@ import argparse
 import atexit
 import logging
 import os
+import re
 import shutil
 import stat
 import tempfile
@@ -223,6 +224,38 @@ def _run_turn(
         state = Command(resume={"decisions": decisions})  # type: ignore[assignment]
 
 
+# ── Conversational short-circuit ─────────────────────────────────────────────
+
+_CONVERSATIONAL_RE = re.compile(
+    r"^\s*("
+    r"hi+[!?.]?|hello+[!?.]?|hey+[!?.]?|howdy[!?.]?|"
+    r"good\s+(morning|afternoon|evening|day)[!?.]?|"
+    r"what'?s\s+up[!?.]?|"
+    r"who\s+are\s+you[!?.]?|what\s+can\s+you\s+do[!?.]?|"
+    r"help(\s+me)?[!?.]?|"
+    r"thanks?[!?.]?|thank\s+you[!?.]?|"
+    r"bye+[!?.]?|goodbye[!?.]?|cheers[!?.]?"
+    r")\s*$",
+    re.IGNORECASE,
+)
+
+_CONVERSATIONAL_REPLY = (
+    "Hello! I'm your UST Coding Agent. Describe a coding task and I'll get to work — "
+    "e.g. \"add a retry decorator to the auth module\" or \"run the tests and fix failures\"."
+)
+
+
+def _conversational_reply(message: str) -> str | None:
+    """Return a canned reply if the message is conversational, else None.
+
+    Local models don't reliably honour system-prompt instructions to avoid
+    tool use on greetings. We intercept here so the agent is never invoked.
+    """
+    if _CONVERSATIONAL_RE.match(message):
+        return _CONVERSATIONAL_REPLY
+    return None
+
+
 # ── REPL ──────────────────────────────────────────────────────────────────────
 
 def _repl(
@@ -256,6 +289,11 @@ def _repl(
         if task.lower() in ("exit", "quit", "q", ":q"):
             print("Bye.")
             break
+
+        quick = _conversational_reply(task)
+        if quick:
+            print(f"\n{quick}\n")
+            continue
 
         try:
             response = _run_turn(
