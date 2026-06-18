@@ -75,6 +75,7 @@ def build_agent(
     backend = LocalShellBackend(
         root_dir=cwd or os.getcwd(),
         inherit_env=True,  # inherit RTK-patched PATH and all env vars
+        virtual_mode=False,
     )
 
     agent = deepagents.create_deep_agent(
