@@ -17,8 +17,12 @@ export class AgentClient {
     this.outputChannel = outputChannel;
   }
 
-  onEvent(handler: (event: AgentEvent) => void): void {
+  onEvent(handler: (event: AgentEvent) => void): vscode.Disposable {
     this.eventHandlers.push(handler);
+    return new vscode.Disposable(() => {
+      const i = this.eventHandlers.indexOf(handler);
+      if (i >= 0) this.eventHandlers.splice(i, 1);
+    });
   }
 
   private emit(event: AgentEvent): void {

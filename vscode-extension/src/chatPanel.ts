@@ -39,10 +39,13 @@ export class ChatPanel {
 
     this.panel.webview.html = this._getHtml();
 
-    // Forward agent events to the webview
+    // Forward agent events to the webview; capture interrupt state for decision tracking
     this.client.onEvent((event) => {
-      const msg: ExtensionToWebview = event as ExtensionToWebview;
-      this.panel.webview.postMessage(msg);
+      if (event.type === "interrupt") {
+        this.pendingRequests = event.action_requests;
+        this.decisions = new Array(event.action_requests.length);
+      }
+      this.panel.webview.postMessage(event as ExtensionToWebview);
     });
 
     // Handle messages from the webview
@@ -98,24 +101,11 @@ export class ChatPanel {
         this.client.send({ type: "task", message: msg.message });
         break;
 
-      case "decision": {
-        const decision =
-          msg.approved
-            ? { type: "approve" as const }
-            : { type: "reject" as const, message: msg.reason };
-        this.decisions[msg.index] = decision;
-
-        // Once all pending requests have a decision, send them
-        if (
-          this.pendingRequests.length > 0 &&
-          this.decisions.filter(Boolean).length === this.pendingRequests.length
-        ) {
-          this.client.send({ type: "decision", decisions: this.decisions });
-          this.pendingRequests = [];
-          this.decisions = [];
-        }
+      case "decision":
+        this.client.send({ type: "decision", decisions: msg.decisions });
+        this.pendingRequests = [];
+        this.decisions = [];
         break;
-      }
 
       case "refreshSessions":
         this.client.send({ type: "sessions" });

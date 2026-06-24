@@ -1,53 +1,78 @@
 import * as vscode from "vscode";
 import { AgentClient } from "./agentClient";
-import { ChatPanel } from "./chatPanel";
-import { SessionTreeProvider } from "./sessionTree";
+import { AgentTerminalPty } from "./agentTerminal";
+import { ChatViewProvider } from "./chatView";
+
+let client: AgentClient;
+let currentPty:      AgentTerminalPty | undefined;
+let currentTerminal: vscode.Terminal  | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const outputChannel = vscode.window.createOutputChannel("UST Agent");
-  const client = new AgentClient(outputChannel);
-  const sessionTree = new SessionTreeProvider(client);
+  const out = vscode.window.createOutputChannel("UST Agent");
+  client = new AgentClient(out);
 
-  // Register session tree view
-  const treeView = vscode.window.createTreeView("ust-agent.sessionView", {
-    treeDataProvider: sessionTree,
-    showCollapseAll: false,
-  });
+  // ── Chat sidebar (WebviewView — primary UI) ─────────────────────────────
 
-  // Start the subprocess as soon as a workspace is open
-  const cwd =
-    vscode.workspace.workspaceFolders?.[0]?.uri?.fsPath ?? process.cwd();
+  const chatProvider = new ChatViewProvider(context.extensionUri, client, out);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(ChatViewProvider.viewType, chatProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+  );
+
+  // Start subprocess early so panel open is instant
+  const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.cwd();
   client.start(cwd);
-  client.send({ type: "sessions" }); // initial session list
 
-  // ── Commands ───────────────────────────────────────────────────────────────
+  // ── Commands ────────────────────────────────────────────────────────────
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("ust-agent.openPanel", () => {
-      ChatPanel.createOrShow(client, context.extensionUri);
+
+    vscode.commands.registerCommand("ust-agent.openTerminal", () => {
+      ensureTerminal(out).then(([terminal]) => terminal.show(true));
     }),
 
     vscode.commands.registerCommand("ust-agent.newSession", () => {
-      const panel = ChatPanel.createOrShow(client, context.extensionUri);
-      panel.startNewSession();
+      chatProvider.startNewSession();
+      vscode.commands.executeCommand("ust-agent.chatView.focus");
     }),
 
     vscode.commands.registerCommand("ust-agent.refreshSessions", () => {
-      sessionTree.refresh();
+      if (client.isRunning()) client.send({ type: "sessions" });
     }),
 
-    vscode.commands.registerCommand(
-      "ust-agent.resumeSession",
-      (thread_id: string) => {
-        const panel = ChatPanel.createOrShow(client, context.extensionUri);
-        panel.resumeSession(thread_id);
-      }
-    ),
+    vscode.commands.registerCommand("ust-agent.resumeSession", (threadId: string) => {
+      chatProvider.resumeSession(threadId);
+      vscode.commands.executeCommand("ust-agent.chatView.focus");
+    }),
 
-    treeView,
-    outputChannel,
-    { dispose: () => client.dispose() }
+    out,
+    { dispose: () => client.dispose() },
   );
 }
 
-export function deactivate(): void {}
+export function deactivate(): void {
+  client?.dispose();
+}
+
+// ── Terminal lifecycle ──────────────────────────────────────────────────────
+
+/**
+ * Returns [terminal, pty]. Re-uses an existing terminal if still alive;
+ * otherwise creates a fresh PTY + terminal pair.
+ */
+async function ensureTerminal(
+  out: vscode.OutputChannel,
+): Promise<[vscode.Terminal, AgentTerminalPty]> {
+  if (currentTerminal && vscode.window.terminals.includes(currentTerminal)) {
+    return [currentTerminal, currentPty!];
+  }
+
+  const pty      = new AgentTerminalPty(client, out);
+  const terminal = vscode.window.createTerminal({ name: "UST Agent", pty });
+
+  currentPty      = pty;
+  currentTerminal = terminal;
+
+  return [terminal, pty];
+}

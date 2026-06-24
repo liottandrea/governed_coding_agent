@@ -122,7 +122,7 @@ export interface WebviewSettings {
 
 export type WebviewToExtension =
   | { type: "task"; message: string }
-  | { type: "decision"; index: number; approved: boolean; reason?: string }
+  | { type: "decision"; decisions: Array<{ type: "approve" } | { type: "reject"; message?: string }> }
   | { type: "newSession" }
   | { type: "resumeSession"; thread_id: string }
   | { type: "refreshSessions" }

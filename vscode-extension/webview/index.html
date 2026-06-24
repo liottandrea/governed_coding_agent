@@ -4,76 +4,100 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; style-src {{CSS_URI}} 'unsafe-inline'; script-src {{JS_URI}} 'unsafe-inline';" />
+    content="default-src 'none'; style-src {{CSS_URI}} 'unsafe-inline'; script-src {{JS_URI}};" />
   <link rel="stylesheet" href="{{CSS_URI}}" />
   <title>UST Agent</title>
 </head>
 <body>
+<div id="app">
 
-<!-- ── Controls bar ──────────────────────────────────────────────────────── -->
-<div id="controls">
-  <div class="control-row">
-    <label>Data class
-      <select id="dataClass">
-        <option value="public">public</option>
-        <option value="internal" selected>internal</option>
-        <option value="restricted">restricted</option>
-      </select>
-    </label>
-    <label>Role
-      <select id="role">
-        <option value="planner" selected>planner</option>
-        <option value="codegen">codegen</option>
-      </select>
-    </label>
-    <label>Knowledge
-      <input type="checkbox" id="knowledge" checked />
-    </label>
-    <button id="btnNew" title="Start a new session">＋ New</button>
+  <div id="header">
+    <div class="header-left">
+      <svg class="logo" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="7" width="18" height="13" rx="2.5"/>
+        <rect x="6.5" y="10" width="4" height="4" rx="1" fill="var(--vscode-editor-background)"/>
+        <rect x="13.5" y="10" width="4" height="4" rx="1" fill="var(--vscode-editor-background)"/>
+        <line x1="12" y1="7" x2="12" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="12" cy="2.8" r="1.5" fill="currentColor"/>
+      </svg>
+      <span class="title">UST Agent</span>
+    </div>
+    <div class="header-right">
+      <button id="btnSettings" class="hdr-btn" title="Toggle settings">Settings</button>
+      <button id="btnNew" class="hdr-btn accent" title="Start a new session">+ New</button>
+    </div>
   </div>
-  <div class="control-row">
-    <label>Planner model
-      <select id="plannerModel">
-        <option value="cheap">cheap (Haiku)</option>
-        <option value="mid" selected>mid (Sonnet)</option>
-        <option value="frontier">frontier (Sonnet 4.6)</option>
-        <option value="local_fast">local fast (phi4-mini)</option>
-        <option value="local_standard">local standard (devstral)</option>
-        <option value="local_heavy">local heavy (qwen 35B)</option>
-      </select>
-    </label>
-    <label>Subagent model
-      <select id="subagentModel">
-        <option value="cheap" selected>cheap (Haiku)</option>
-        <option value="mid">mid (Sonnet)</option>
-        <option value="frontier">frontier (Sonnet 4.6)</option>
-        <option value="local_fast">local fast (phi4-mini)</option>
-        <option value="local_standard">local standard (devstral)</option>
-        <option value="local_heavy">local heavy (qwen 35B)</option>
-      </select>
-    </label>
+
+  <div id="settings" class="collapsed">
+    <div class="settings-row">
+      <div class="setting-group">
+        <span class="setting-label">Data class</span>
+        <select id="dataClass">
+          <option value="public">public</option>
+          <option value="internal" selected>internal</option>
+          <option value="restricted">restricted</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <span class="setting-label">Role</span>
+        <select id="role">
+          <option value="planner" selected>planner</option>
+          <option value="codegen">codegen</option>
+        </select>
+      </div>
+      <div class="setting-group toggle-group">
+        <input type="checkbox" id="knowledge" checked />
+        <span class="setting-label">Knowledge</span>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="setting-group">
+        <span class="setting-label">Planner model</span>
+        <select id="plannerModel">
+          <option value="cheap">Haiku  (cheap)</option>
+          <option value="mid" selected>Sonnet  (mid)</option>
+          <option value="frontier">Sonnet 4.6  (frontier)</option>
+          <option value="local_fast">phi4-mini  (local fast)</option>
+          <option value="local_standard">devstral  (local std)</option>
+          <option value="local_heavy">qwen 35B  (local heavy)</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <span class="setting-label">Subagent model</span>
+        <select id="subagentModel">
+          <option value="cheap" selected>Haiku  (cheap)</option>
+          <option value="mid">Sonnet  (mid)</option>
+          <option value="frontier">Sonnet 4.6  (frontier)</option>
+          <option value="local_fast">phi4-mini  (local fast)</option>
+          <option value="local_standard">devstral  (local std)</option>
+          <option value="local_heavy">qwen 35B  (local heavy)</option>
+        </select>
+      </div>
+    </div>
+    <div class="settings-row">
+      <div class="setting-group full">
+        <span class="setting-label">System prompt override</span>
+        <textarea id="systemPrompt" rows="3" placeholder="Leave blank to use the default prompt…"></textarea>
+      </div>
+    </div>
   </div>
-  <details id="promptDetails">
-    <summary>Custom system prompt</summary>
-    <textarea id="systemPrompt" rows="4" placeholder="Leave blank to use the default system prompt…"></textarea>
-  </details>
+
+  <div id="chat"></div>
+
+  <div id="inputArea">
+    <textarea id="msgInput" rows="1" placeholder="Describe a coding task…"></textarea>
+    <div id="inputFooter">
+      <span id="modelPill" class="model-pill"></span>
+      <button id="btnSend">Send &rarr;</button>
+    </div>
+  </div>
+
+  <div id="statusBar">
+    <span id="sessionId">No active session</span>
+    <a id="traceLink" href="#" style="display:none" target="_blank">View trace &nearr;</a>
+  </div>
+
 </div>
-
-<!-- ── Session indicator ──────────────────────────────────────────────────── -->
-<div id="sessionBar">
-  <span id="sessionId">No active session</span>
-  <a id="traceLink" href="#" style="display:none" target="_blank">🔍 View in Langfuse</a>
-</div>
-
-<!-- ── Chat area ─────────────────────────────────────────────────────────── -->
-<div id="chat"></div>
-
-<!-- ── Input area ────────────────────────────────────────────────────────── -->
-<div id="inputArea">
-  <textarea id="msgInput" rows="2" placeholder="Describe a coding task…"></textarea>
-  <button id="btnSend">Send</button>
-</div>
-
 <script src="{{JS_URI}}"></script>
 </body>
 </html>
