@@ -16,7 +16,7 @@ class PolicyError(Exception):
     """Raised when a routing decision violates the data-class policy."""
 
 
-_AGENT_HOME = Path(os.getenv("UST_AGENT_HOME", Path(__file__).parent.parent.parent))
+_AGENT_HOME = Path(os.getenv("GOVERNED_AGENT_HOME", Path(__file__).parent.parent.parent))
 _CONFIG_PATH = _AGENT_HOME / "config" / "data-classes.yaml"
 
 

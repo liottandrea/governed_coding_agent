@@ -1,9 +1,10 @@
 {
-  "name": "ust-coding-agent",
-  "displayName": "UST Coding Agent",
-  "description": "AI coding assistant powered by the UST Coding Agent — terminal-native, HITL-aware, multi-model",
+  "name": "governed-coding-agent",
+  "displayName": "Governed Coding Agent",
+  "description": "AI coding assistant powered by the Governed Coding Agent — terminal-native, HITL-aware, multi-model",
   "version": "0.2.0",
-  "publisher": "ust",
+  "publisher": "governed-coding-agent",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.100.0"
   },
@@ -14,18 +15,18 @@
 
     "commands": [
       {
-        "command": "ust-agent.openTerminal",
-        "title": "UST Agent: Open Terminal",
+        "command": "governed-coding-agent.openTerminal",
+        "title": "Governed Coding Agent: Open Terminal",
         "icon": "$(terminal)"
       },
       {
-        "command": "ust-agent.newSession",
-        "title": "UST Agent: New Session",
+        "command": "governed-coding-agent.newSession",
+        "title": "Governed Coding Agent: New Session",
         "icon": "$(add)"
       },
       {
-        "command": "ust-agent.refreshSessions",
-        "title": "UST Agent: Refresh Sessions",
+        "command": "governed-coding-agent.refreshSessions",
+        "title": "Governed Coding Agent: Refresh Sessions",
         "icon": "$(refresh)"
       }
     ],
@@ -33,17 +34,17 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "ust-agent-sidebar",
-          "title": "UST Agent",
+          "id": "governed-coding-agent-sidebar",
+          "title": "Governed Coding Agent",
           "icon": "resources/icon.svg"
         }
       ]
     },
 
     "views": {
-      "ust-agent-sidebar": [
+      "governed-coding-agent-sidebar": [
         {
-          "id": "ust-agent.chatView",
+          "id": "governed-coding-agent.chatView",
           "name": "Chat",
           "type": "webview"
         }
@@ -53,32 +54,32 @@
     "menus": {
       "view/title": [
         {
-          "command": "ust-agent.newSession",
-          "when": "view == ust-agent.chatView",
+          "command": "governed-coding-agent.newSession",
+          "when": "view == governed-coding-agent.chatView",
           "group": "navigation@1"
         },
         {
-          "command": "ust-agent.openTerminal",
-          "when": "view == ust-agent.chatView",
+          "command": "governed-coding-agent.openTerminal",
+          "when": "view == governed-coding-agent.chatView",
           "group": "navigation@2"
         }
       ]
     },
 
     "configuration": {
-      "title": "UST Coding Agent",
+      "title": "Governed Coding Agent",
       "properties": {
-        "ustAgent.binaryPath": {
+        "governedCodingAgent.binaryPath": {
           "type": "string",
-          "default": "ust-agent",
-          "description": "Path to the ust-agent binary (defaults to PATH lookup)"
+          "default": "governed-coding-agent",
+          "description": "Path to the governed-coding-agent binary (defaults to PATH lookup)"
         },
-        "ustAgent.agentHome": {
+        "governedCodingAgent.agentHome": {
           "type": "string",
           "default": "",
-          "description": "UST_AGENT_HOME directory (leave blank to auto-detect)"
+          "description": "GOVERNED_AGENT_HOME directory (leave blank to auto-detect)"
         },
-        "ustAgent.dataClass": {
+        "governedCodingAgent.dataClass": {
           "type": "string",
           "enum": ["public", "internal", "restricted"],
           "enumDescriptions": [
@@ -89,13 +90,13 @@
           "default": "internal",
           "description": "Data classification — controls which model groups are permitted"
         },
-        "ustAgent.role": {
+        "governedCodingAgent.role": {
           "type": "string",
           "enum": ["planner", "codegen"],
           "default": "planner",
           "description": "Primary agent role"
         },
-        "ustAgent.plannerModel": {
+        "governedCodingAgent.plannerModel": {
           "type": "string",
           "enum": ["cheap", "mid", "frontier", "local_fast", "local_standard", "local_heavy"],
           "enumDescriptions": [
@@ -109,13 +110,13 @@
           "default": "mid",
           "description": "Model group for the planner role"
         },
-        "ustAgent.subagentModel": {
+        "governedCodingAgent.subagentModel": {
           "type": "string",
           "enum": ["cheap", "mid", "frontier", "local_fast", "local_standard", "local_heavy"],
           "default": "cheap",
           "description": "Model group for sub-agent roles (codegen, knowledge, summary, testing)"
         },
-        "ustAgent.includeKnowledge": {
+        "governedCodingAgent.includeKnowledge": {
           "type": "boolean",
           "default": true,
           "description": "Include knowledge retrieval tool in each session"

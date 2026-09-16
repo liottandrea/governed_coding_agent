@@ -19,11 +19,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Enable observability before any model calls
-from ust_agent import observability
+from governed_coding_agent import observability
 observability.configure()
 
-from ust_agent.gateway import resolve_model
-from ust_agent.policy import PolicyError
+from governed_coding_agent.gateway import resolve_model
+from governed_coding_agent.policy import PolicyError
 from langchain_core.messages import HumanMessage
 import litellm
 

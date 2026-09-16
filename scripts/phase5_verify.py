@@ -4,7 +4,7 @@ Checks:
   1. resolve_fallback_group() reads fallback_group from routing-rules.yaml.
   2. resolve_model("testing", ...) returns a RunnableWithFallbacks (cascade active).
   3. Testing agent builds with HITL nodes.
-  4. Live auto-approve run: agent retrieves UST patterns, writes tests, executes them.
+  4. Live auto-approve run: agent retrieves prior patterns, writes tests, executes them.
   5. Langfuse trace check.
 
 Run with:
@@ -34,7 +34,7 @@ def section(title: str) -> None:
 # ── 1. resolve_fallback_group ────────────────────────────────────────────────
 
 section("1. resolve_fallback_group for 'testing' role")
-from ust_agent.gateway import resolve_fallback_group, resolve_group
+from governed_coding_agent.gateway import resolve_fallback_group, resolve_group
 
 fb = resolve_fallback_group("testing")
 primary = resolve_group("testing")
@@ -47,7 +47,7 @@ print("  PASS: fallback group defined and distinct from primary")
 # ── 2. Cascade wiring: resolve_model returns RunnableWithFallbacks ───────────
 
 section("2. resolve_model('testing') returns a cascaded model")
-from ust_agent.gateway import resolve_model, CascadingChatModel
+from governed_coding_agent.gateway import resolve_model, CascadingChatModel
 
 model = resolve_model("testing", "internal")
 print(f"  model type: {type(model).__name__}")
@@ -73,7 +73,7 @@ print("  PASS: codegen (no fallback) returns plain ChatLiteLLM")
 # ── 4. Testing agent builds with HITL ───────────────────────────────────────
 
 section("4. Testing agent builds with HITL + checkpointer")
-from ust_agent.subagents.testing import build_testing_agent
+from governed_coding_agent.subagents.testing import build_testing_agent
 from langgraph.graph.state import CompiledStateGraph
 
 agent = build_testing_agent(data_class="internal")
@@ -89,8 +89,8 @@ print("  PASS: agent built with HITL and checkpointer")
 
 # ── 5. System prompt includes SKILL.md ──────────────────────────────────────
 
-section("5. System prompt contains UST test style guide")
-from ust_agent.subagents.testing import _build_system_prompt
+section("5. System prompt contains test style guide")
+from governed_coding_agent.subagents.testing import _build_system_prompt
 
 prompt = _build_system_prompt()
 assert "parametrize" in prompt.lower() or "parametrize" in prompt
@@ -101,15 +101,15 @@ print("  PASS: system prompt includes testing SKILL.md content")
 # ── 6. Live auto-approve run ─────────────────────────────────────────────────
 
 section("6. Full auto-approve run: test generation + execution")
-from ust_agent.subagents.testing import run
+from governed_coding_agent.subagents.testing import run
 
 TASK = (
-    "Write pytest tests for the validate_email function from UST prior work. "
+    "Write pytest tests for the validate_email function from prior work. "
     "Search the knowledge store for validate_email first. "
-    "Write the tests to /ust_workspace/test_ust_email.py. "
+    "Write the tests to /governed_workspace/test_email.py. "
     "Test: valid email returns valid=True, invalid email returns valid=False, "
     "empty string returns valid=False. "
-    "Run the tests with: python -m pytest /ust_workspace/test_ust_email.py -v"
+    "Run the tests with: python -m pytest /governed_workspace/test_email.py -v"
 )
 print(f"  Task: {TASK[:120]}...")
 

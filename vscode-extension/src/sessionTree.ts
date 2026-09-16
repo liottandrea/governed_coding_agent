@@ -12,7 +12,7 @@ export class SessionItem extends vscode.TreeItem {
     this.description = `${turns} turn${turns !== 1 ? "s" : ""}`;
     this.iconPath    = new vscode.ThemeIcon("comment-discussion");
     this.command     = {
-      command:   "ust-agent.resumeSession",
+      command:   "governed-coding-agent.resumeSession",
       title:     "Resume Session",
       arguments: [thread_id],
     };

@@ -1,9 +1,9 @@
 """Code Authoring sub-agent.
 
-Generates UST-styled Python code grounded in prior work retrieved from the
+Generates house-styled Python code grounded in prior work retrieved from the
 knowledge store. Steps for every task:
 
-  1. Call retrieve_knowledge to find relevant UST patterns and citations.
+  1. Call retrieve_knowledge to find relevant prior patterns and citations.
   2. Write code to the DeepAgents virtual filesystem (write_file tool).
   3. Execute the code in the built-in sandbox (execute tool).
 
@@ -19,20 +19,20 @@ import deepagents
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
 
-from ust_agent.gateway import resolve_model
-from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
-from ust_agent import observability
+from governed_coding_agent.gateway import resolve_model
+from governed_coding_agent.knowledge.retrieve import retrieve_knowledge_tool
+from governed_coding_agent import observability
 
 logger = logging.getLogger(__name__)
 
 _SKILL_PATH = Path(__file__).parent.parent / "skills" / "code-authoring" / "SKILL.md"
 
 _BASE_SYSTEM_PROMPT = """\
-You are the UST Code Authoring Agent. You produce high-quality Python code
-for UST delivery projects.
+You are the Governed Coding Agent's Code Authoring sub-agent. You produce high-quality Python code
+for engineering projects.
 
 For EVERY coding task you must:
-1. Call retrieve_knowledge FIRST to find relevant UST prior work.
+1. Call retrieve_knowledge FIRST to find relevant prior work.
 2. Use the retrieved patterns as the starting point for your implementation.
    Cite the source(s) in a comment at the top of each generated file.
 3. Write the code to a file using write_file.
@@ -45,7 +45,7 @@ NEVER generate code without first consulting the knowledge store.
 
 
 def _build_system_prompt() -> str:
-    """Combine the base prompt with the UST style guide from SKILL.md."""
+    """Combine the base prompt with the style guide from SKILL.md."""
     try:
         skill_content = _SKILL_PATH.read_text(encoding="utf-8")
         return f"{_BASE_SYSTEM_PROMPT}\n\n---\n\n{skill_content}"
@@ -61,12 +61,12 @@ def build_code_authoring_agent(
     """Build and return the Code Authoring sub-agent.
 
     Tools available to the agent:
-    - retrieve_knowledge: search UST knowledge store for prior patterns
+    - retrieve_knowledge: search the knowledge store for prior patterns
     - write_file: write code to the DeepAgents virtual filesystem
     - execute: run a command in the built-in sandbox
     (write_file and execute are built into deepagents by default)
     """
-    from ust_agent.knowledge.retrieve import retrieve_knowledge_tool as _retrieve_tool
+    from governed_coding_agent.knowledge.retrieve import retrieve_knowledge_tool as _retrieve_tool
 
     model = resolve_model("codegen", data_class)
     _checkpointer = checkpointer or MemorySaver()

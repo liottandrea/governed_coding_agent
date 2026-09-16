@@ -12,7 +12,7 @@ ROOT = Path(__file__).parent.parent
 
 # ── tree-sitter chunking ──────────────────────────────────────────────────────
 def test_chunk_python_extracts_functions() -> None:
-    from ust_agent.knowledge.ingest import chunk_python_file
+    from governed_coding_agent.knowledge.ingest import chunk_python_file
     source = '''
 def hello(name: str) -> str:
     """Say hello."""
@@ -31,7 +31,7 @@ def goodbye(name: str) -> str:
 
 
 def test_chunk_python_extracts_class() -> None:
-    from ust_agent.knowledge.ingest import chunk_python_file
+    from governed_coding_agent.knowledge.ingest import chunk_python_file
     source = '''
 class MyParser:
     """A parser."""
@@ -46,7 +46,7 @@ class MyParser:
 
 def test_chunk_python_fallback_to_module() -> None:
     """Files with only imports/assignments → single module chunk."""
-    from ust_agent.knowledge.ingest import chunk_python_file
+    from governed_coding_agent.knowledge.ingest import chunk_python_file
     source = "import os\nX = 1\n"
     chunks = chunk_python_file(source, path="consts.py")
     assert len(chunks) == 1
@@ -54,7 +54,7 @@ def test_chunk_python_fallback_to_module() -> None:
 
 
 def test_chunk_deprecated_flag_propagates() -> None:
-    from ust_agent.knowledge.ingest import chunk_python_file
+    from governed_coding_agent.knowledge.ingest import chunk_python_file
     source = "def old(): pass\n"
     chunks = chunk_python_file(source, path="old_deprecated.py", deprecated=True)
     assert all(c.deprecated for c in chunks)
@@ -65,7 +65,7 @@ def test_retrieve_returns_citations(tmp_path: Path) -> None:
     """Retrieval against the live pgvector store returns Citation objects."""
     os.chdir(ROOT)
     from dotenv import load_dotenv; load_dotenv()
-    from ust_agent.knowledge.retrieve import retrieve, Citation
+    from governed_coding_agent.knowledge.retrieve import retrieve, Citation
     hits = retrieve("parse CSV file", top_k=3)
     assert isinstance(hits, list)
     if hits:  # store may be empty in a fresh env; only check shape when populated
@@ -78,26 +78,26 @@ def test_retrieve_returns_empty_for_unrelated_query() -> None:
     """Very low similarity queries may return results — just verify no crash."""
     os.chdir(ROOT)
     from dotenv import load_dotenv; load_dotenv()
-    from ust_agent.knowledge.retrieve import retrieve
+    from governed_coding_agent.knowledge.retrieve import retrieve
     hits = retrieve("quantum entanglement photon spin", top_k=2)
     assert isinstance(hits, list)  # empty or low-score, never raises
 
 
 def test_citation_format_includes_path_and_symbol() -> None:
-    from ust_agent.knowledge.retrieve import Citation
+    from governed_coding_agent.knowledge.retrieve import Citation
     c = Citation(
-        repo="ust-seed", path="seed/utils.py", commit="abc123",
+        repo="seed-corpus", path="seed/utils.py", commit="abc123",
         chunk_type="function", symbol="my_func",
         content="def my_func(): pass", deprecated=False, score=0.92,
     )
     text = c.format()
-    assert "ust-seed/seed/utils.py:my_func@abc123" in text
+    assert "seed-corpus/seed/utils.py:my_func@abc123" in text
     assert "score=0.920" in text
     assert "DEPRECATED" not in text
 
 
 def test_citation_format_flags_deprecated() -> None:
-    from ust_agent.knowledge.retrieve import Citation
+    from governed_coding_agent.knowledge.retrieve import Citation
     c = Citation(
         repo="r", path="p.py", commit="x",
         chunk_type="function", symbol="old_fn",
@@ -110,8 +110,8 @@ def test_citation_format_flags_deprecated() -> None:
 def test_embed_restricted_raises_policy_error() -> None:
     os.chdir(ROOT)
     from dotenv import load_dotenv; load_dotenv()
-    from ust_agent.gateway import embed
-    from ust_agent.policy import PolicyError
+    from governed_coding_agent.gateway import embed
+    from governed_coding_agent.policy import PolicyError
     with pytest.raises(PolicyError):
         embed(["test text"], data_class="restricted")
 
@@ -120,7 +120,7 @@ def test_embed_restricted_raises_policy_error() -> None:
 def test_knowledge_agent_builds() -> None:
     os.chdir(ROOT)
     from dotenv import load_dotenv; load_dotenv()
-    from ust_agent.subagents.knowledge import build_knowledge_agent
+    from governed_coding_agent.subagents.knowledge import build_knowledge_agent
     from langgraph.graph.state import CompiledStateGraph
     agent = build_knowledge_agent()
     assert isinstance(agent, CompiledStateGraph)

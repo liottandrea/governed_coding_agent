@@ -13,7 +13,7 @@ ROOT = Path(__file__).parent.parent
 
 def test_litellm_params_resolve_frontier() -> None:
     os.chdir(ROOT)
-    from ust_agent.gateway import _litellm_params_for_group
+    from governed_coding_agent.gateway import _litellm_params_for_group
     params = _litellm_params_for_group("frontier")
     assert params["model"] == "bedrock/us.anthropic.claude-sonnet-4-6"
     assert params["aws_profile_name"] == "genai-agent-user"
@@ -21,21 +21,21 @@ def test_litellm_params_resolve_frontier() -> None:
 
 def test_litellm_params_resolve_cheap() -> None:
     os.chdir(ROOT)
-    from ust_agent.gateway import _litellm_params_for_group
+    from governed_coding_agent.gateway import _litellm_params_for_group
     params = _litellm_params_for_group("cheap")
     assert "haiku" in params["model"].lower()
 
 
 def test_litellm_params_unknown_group_raises() -> None:
     os.chdir(ROOT)
-    from ust_agent.gateway import _litellm_params_for_group
+    from governed_coding_agent.gateway import _litellm_params_for_group
     with pytest.raises(ValueError, match="not found"):
         _litellm_params_for_group("does_not_exist")
 
 
 def test_resolve_model_uses_full_bedrock_id() -> None:
     os.chdir(ROOT)
-    from ust_agent.gateway import resolve_model
+    from governed_coding_agent.gateway import resolve_model
     model = resolve_model("codegen", "internal")
     assert model.model.startswith("bedrock/us.anthropic.")
 
@@ -47,7 +47,7 @@ def test_all_roles_resolve_to_known_group() -> None:
     """Every role in routing-rules.yaml must map to a group in litellm.config.yaml."""
     os.chdir(ROOT)
     import yaml
-    from ust_agent.gateway import _litellm_params_for_group
+    from governed_coding_agent.gateway import _litellm_params_for_group
 
     with open("config/routing-rules.yaml") as f:
         routing = yaml.safe_load(f)
@@ -66,7 +66,7 @@ def test_all_roles_resolve_to_known_group() -> None:
 def test_local_groups_exist_in_litellm_config() -> None:
     """local_fast, local_standard, local_heavy must all be in litellm config."""
     os.chdir(ROOT)
-    from ust_agent.gateway import _litellm_params_for_group
+    from governed_coding_agent.gateway import _litellm_params_for_group
     for group in ("local_fast", "local_standard", "local_heavy"):
         params = _litellm_params_for_group(group)
         assert params["model"].startswith("ollama/"), (
@@ -78,7 +78,7 @@ def test_local_groups_exist_in_litellm_config() -> None:
 def test_restricted_class_allows_local_groups() -> None:
     """restricted data class must permit all local_* groups."""
     os.chdir(ROOT)
-    from ust_agent.policy import check
+    from governed_coding_agent.policy import check
     for group in ("local_fast", "local_standard", "local_heavy"):
         check("restricted", group)  # must not raise
 
@@ -87,7 +87,7 @@ def test_observability_configure_no_keys_is_safe() -> None:
     """configure() must not crash when keys are absent."""
     os.chdir(ROOT)
     # Reset the module-level flag
-    import ust_agent.observability as obs
+    import governed_coding_agent.observability as obs
     obs._configured = False
     with patch.dict(os.environ, {"LANGFUSE_PUBLIC_KEY": "", "LANGFUSE_SECRET_KEY": ""}, clear=False):
         obs.configure()  # should warn but not raise
@@ -97,7 +97,7 @@ def test_observability_configure_no_keys_is_safe() -> None:
 def test_observability_configure_registers_langfuse_callback() -> None:
     """With keys set, configure() adds 'langfuse' to litellm callbacks."""
     os.chdir(ROOT)
-    import ust_agent.observability as obs
+    import governed_coding_agent.observability as obs
     import litellm
 
     obs._configured = False

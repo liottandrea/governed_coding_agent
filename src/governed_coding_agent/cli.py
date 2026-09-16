@@ -1,23 +1,23 @@
-"""UST Coding Agent — interactive CLI.
+"""Governed Coding Agent — interactive CLI.
 
 Drop-in terminal coding assistant. Run it in any project directory.
 Sessions are persisted in Postgres so you can resume after a restart.
 
 Usage:
     # Interactive REPL (like running `claude`)
-    ust-agent
+    governed-coding-agent
 
     # Single-shot task
-    ust-agent "Refactor the auth module to use our retry decorator pattern"
+    governed-coding-agent "Refactor the auth module to use our retry decorator pattern"
 
     # Resume a previous session by thread ID
-    ust-agent --session <thread-id>
+    governed-coding-agent --session <thread-id>
 
     # List saved sessions
-    ust-agent --list-sessions
+    governed-coding-agent --list-sessions
 
     # Restricted data (local models only, never Bedrock)
-    ust-agent --data-class restricted
+    governed-coding-agent --data-class restricted
 
 Flags:
     --data-class      public | internal | restricted  (default: internal)
@@ -25,7 +25,7 @@ Flags:
     --session         thread ID to resume
     --list-sessions   print recent sessions and exit
     --role            agent role: planner | codegen  (default: planner)
-    --no-knowledge    skip UST knowledge store queries
+    --no-knowledge    skip knowledge store queries
 """
 from __future__ import annotations
 
@@ -45,11 +45,11 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.types import Command
 
-logging.basicConfig(level=os.getenv("UST_AGENT_LOG_LEVEL", "WARNING").upper())
+logging.basicConfig(level=os.getenv("GOVERNED_AGENT_LOG_LEVEL", "WARNING").upper())
 logger = logging.getLogger(__name__)
 
-# Resolve the agent install root: UST_AGENT_HOME > package-relative (editable install)
-_AGENT_HOME = Path(os.getenv("UST_AGENT_HOME", Path(__file__).parent.parent.parent))
+# Resolve the agent install root: GOVERNED_AGENT_HOME > package-relative (editable install)
+_AGENT_HOME = Path(os.getenv("GOVERNED_AGENT_HOME", Path(__file__).parent.parent.parent))
 
 # Commands that benefit from RTK's output compression.
 _RTK_COMMANDS = [
@@ -68,7 +68,7 @@ def _setup_rtk_path() -> str | None:
     """
     if not shutil.which("rtk"):
         return None
-    tmpdir = tempfile.mkdtemp(prefix="ust-agent-rtk-")
+    tmpdir = tempfile.mkdtemp(prefix="governed-coding-agent-rtk-")
     for cmd in _RTK_COMMANDS:
         wrapper = Path(tmpdir) / cmd
         wrapper.write_text(f"#!/bin/sh\nexec rtk {cmd} \"$@\"\n")
@@ -80,12 +80,12 @@ def _setup_rtk_path() -> str | None:
 
 _BANNER = """\
 ╔══════════════════════════════════════════════════════╗
-║          UST Coding Agent  —  interactive            ║
+║          Governed Coding Agent  —  interactive            ║
 ║  Type your task. 'exit' or Ctrl+C to quit.          ║
 ╚══════════════════════════════════════════════════════╝"""
 
 _SYSTEM_PROMPT_TEMPLATE = """\
-You are the UST Coding Agent — an expert coding assistant for UST delivery \
+You are the Governed Coding Agent — an expert coding assistant for engineering \
 projects. You work directly inside the developer's project directory.
 
 Current working directory: {cwd}
@@ -93,7 +93,7 @@ Current working directory: {cwd}
 Your capabilities:
 - read_file / write_file / edit_file / ls / glob / grep  — full filesystem access
 - execute — run any shell command in the project
-- retrieve_knowledge_tool — search UST's prior code patterns and examples
+- retrieve_knowledge_tool — search this project's prior code patterns and examples
 
 IMPORTANT — read this before using any tool:
 If the user's message is conversational (a greeting, a question about you, \
@@ -105,12 +105,12 @@ Only use tools when the user is asking you to perform a concrete coding task \
 
 When you do have a coding task:
 1. Search the knowledge store first with retrieve_knowledge_tool to find \
-relevant UST patterns, then ground your implementation in them.
+relevant prior patterns, then ground your implementation in them.
 2. Prefer editing existing files over rewriting them from scratch.
-3. When writing new code, follow UST style (from __future__ import annotations, \
+3. When writing new code, follow the house style (from __future__ import annotations, \
 Google docstrings, dataclasses, pathlib, snake_case, specific exceptions).
 4. Always verify your work: run tests or execute the changed code.
-5. Cite the UST pattern you used in a brief comment at the top of new files.
+5. Cite the pattern you used in a brief comment at the top of new files.
 
 Filesystem rules (apply only when working on a coding task):
 - Start exploration from the current working directory ({cwd}), never from /.
@@ -127,8 +127,8 @@ def _dsn() -> str:
     return (
         f"host={os.environ.get('POSTGRES_HOST', 'localhost')} "
         f"port={os.environ.get('POSTGRES_PORT', '5432')} "
-        f"dbname={os.environ.get('POSTGRES_DB', 'ust_agent')} "
-        f"user={os.environ.get('POSTGRES_USER', 'ust_agent')} "
+        f"dbname={os.environ.get('POSTGRES_DB', 'governed_coding_agent')} "
+        f"user={os.environ.get('POSTGRES_USER', 'governed_coding_agent')} "
         f"password={os.environ.get('POSTGRES_PASSWORD', 'changeme')}"
     )
 
@@ -143,8 +143,8 @@ def _build_agent(
     cwd: Path,
     session_id: str,
 ) -> object:
-    from ust_agent.harness import build_agent
-    from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
+    from governed_coding_agent.harness import build_agent
+    from governed_coding_agent.knowledge.retrieve import retrieve_knowledge_tool
 
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(cwd=cwd)
     extra_tools = [retrieve_knowledge_tool] if include_knowledge else []
@@ -240,7 +240,7 @@ _CONVERSATIONAL_RE = re.compile(
 )
 
 _CONVERSATIONAL_REPLY = (
-    "Hello! I'm your UST Coding Agent. Describe a coding task and I'll get to work — "
+    "Hello! I'm your Governed Coding Agent. Describe a coding task and I'll get to work — "
     "e.g. \"add a retry decorator to the auth module\" or \"run the tests and fix failures\"."
 )
 
@@ -274,7 +274,7 @@ def _repl(
     print(f"  data class: {data_class}")
     print(f"  directory : {cwd}")
     print(f"  rtk       : {'active — shell commands compressed' if rtk_active else 'not found (install rtk for token savings)'}")
-    print(f"  resume    : ust-agent --session {thread_id}")
+    print(f"  resume    : governed-coding-agent --session {thread_id}")
     print(f"  history   : persisted in Postgres\n")
 
     while True:
@@ -341,7 +341,7 @@ def _list_sessions(_checkpointer: PostgresSaver) -> None:
     print("─" * 48)
     for thread_id, _latest_cp, turns in rows:
         print(f"  {thread_id:<36}  {turns or '?'}")
-    print(f"\nResume: ust-agent --session <thread-id>\n")
+    print(f"\nResume: governed-coding-agent --session <thread-id>\n")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -351,8 +351,8 @@ def main(argv: list[str] | None = None) -> None:
     rtk_dir = _setup_rtk_path()
 
     parser = argparse.ArgumentParser(
-        prog="ust-agent",
-        description="UST Coding Agent — interactive coding assistant",
+        prog="governed-coding-agent",
+        description="Governed Coding Agent — interactive coding assistant",
     )
     parser.add_argument(
         "task",
@@ -394,7 +394,7 @@ def main(argv: list[str] | None = None) -> None:
         "--no-knowledge",
         action="store_true",
         default=False,
-        help="Disable UST knowledge store queries",
+        help="Disable knowledge store queries",
     )
     parser.add_argument(
         "--server",
@@ -406,11 +406,11 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     if args.server:
-        from ust_agent.server import run_server
+        from governed_coding_agent.server import run_server
         run_server()
         return
 
-    from ust_agent import observability
+    from governed_coding_agent import observability
     observability.configure()
 
     cwd = Path.cwd()

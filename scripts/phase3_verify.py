@@ -16,17 +16,17 @@ sys.path.insert(0, "src")
 from dotenv import load_dotenv
 load_dotenv()
 
-from ust_agent import observability
+from governed_coding_agent import observability
 observability.configure()
 
-from ust_agent.subagents.knowledge import ask
-from ust_agent.knowledge.retrieve import retrieve
+from governed_coding_agent.subagents.knowledge import ask
+from governed_coding_agent.knowledge.retrieve import retrieve
 
 print("─── Phase 3: Knowledge sub-agent ───")
 print()
 
 # ── Query 1: good hit ─────────────────────────────────────────────────────────
-Q1 = "Has UST built a CSV parser with type coercion before?"
+Q1 = "Has this project built a CSV parser with type coercion before?"
 print(f"Query 1: {Q1}")
 print("─" * 60)
 answer1 = ask(Q1)
@@ -35,13 +35,13 @@ print()
 
 assert "csv" in answer1.lower() or "parse" in answer1.lower(), \
     "Expected CSV-related content in answer"
-assert any(x in answer1 for x in ["ust_csv_parser", "parse_csv", "parse_csv_typed"]), \
+assert any(x in answer1 for x in ["csv_parser", "parse_csv", "parse_csv_typed"]), \
     "Expected citation referencing the CSV parser"
 print("✓ Good-hit query returned relevant snippet with citation")
 print()
 
 # ── Query 2: no hit ───────────────────────────────────────────────────────────
-Q2 = "Has UST built a Kubernetes operator for GPU scheduling?"
+Q2 = "Has this project built a Kubernetes operator for GPU scheduling?"
 print(f"Query 2 (no hit): {Q2}")
 print("─" * 60)
 answer2 = ask(Q2)

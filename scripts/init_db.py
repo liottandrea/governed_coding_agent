@@ -1,4 +1,4 @@
-"""Create (or migrate) the pgvector schema for the UST knowledge store.
+"""Create (or migrate) the pgvector schema for the knowledge store.
 
 Run: uv run python scripts/init_db.py
 
@@ -18,15 +18,15 @@ import psycopg
 DSN = (
     f"host={os.environ.get('POSTGRES_HOST','localhost')} "
     f"port={os.environ.get('POSTGRES_PORT','5432')} "
-    f"dbname={os.environ.get('POSTGRES_DB','ust_agent')} "
-    f"user={os.environ.get('POSTGRES_USER','ust_agent')} "
+    f"dbname={os.environ.get('POSTGRES_DB','governed_coding_agent')} "
+    f"user={os.environ.get('POSTGRES_USER','governed_coding_agent')} "
     f"password={os.environ.get('POSTGRES_PASSWORD','changeme')}"
 )
 
 DDL = """
 CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TABLE IF NOT EXISTS ust_chunks (
+CREATE TABLE IF NOT EXISTS code_chunks (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     repo        TEXT        NOT NULL,
     path        TEXT        NOT NULL,
@@ -40,8 +40,8 @@ CREATE TABLE IF NOT EXISTS ust_chunks (
     UNIQUE (repo, path, symbol, commit)
 );
 
-CREATE INDEX IF NOT EXISTS ust_chunks_embedding_idx
-    ON ust_chunks USING ivfflat (embedding vector_cosine_ops)
+CREATE INDEX IF NOT EXISTS code_chunks_embedding_idx
+    ON code_chunks USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 10);
 """
 
@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS ust_chunks_embedding_idx
 def main() -> None:
     with psycopg.connect(DSN, autocommit=True) as conn:
         conn.execute(DDL)
-    print("✓ pgvector schema ready (ust_chunks table + ivfflat index)")
+    print("✓ pgvector schema ready (code_chunks table + ivfflat index)")
 
 
 if __name__ == "__main__":

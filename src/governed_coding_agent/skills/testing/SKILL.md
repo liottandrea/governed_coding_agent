@@ -1,6 +1,6 @@
-# UST Test Authoring Style
+# Test Authoring Style
 
-You are writing pytest tests for a UST delivery project. Follow every rule below.
+You are writing pytest tests for an engineering project. Follow every rule below.
 
 ## File structure
 

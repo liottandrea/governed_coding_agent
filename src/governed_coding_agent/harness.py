@@ -1,4 +1,4 @@
-"""UST Coding Agent orchestrator.
+"""Governed Coding Agent orchestrator.
 
 Assembles the top-level DeepAgents agent using the high-level API.
 The model is always resolved through gateway.py — never a direct provider SDK.
@@ -25,15 +25,15 @@ import deepagents
 from deepagents import CompiledSubAgent
 from deepagents.backends import LocalShellBackend
 
-from ust_agent.gateway import resolve_model
-from ust_agent import observability
+from governed_coding_agent.gateway import resolve_model
+from governed_coding_agent import observability
 
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = (
-    "You are the UST Coding Agent. "
-    "You help delivery teams write high-quality, UST-styled code "
-    "grounded in prior UST work. "
+    "You are the Governed Coding Agent. "
+    "You help engineering teams write high-quality, house-styled code "
+    "grounded in prior project work. "
     "Use the write_file tool to write code to files. "
     "Always be concise and precise."
 )
@@ -51,7 +51,7 @@ def _inject_session_id(model: Any, session_id: str) -> None:
     litellm_params["metadata"] which the Langfuse integration reads.
     For CascadingChatModel we stamp both primary and fallback.
     """
-    from ust_agent.gateway import CascadingChatModel
+    from governed_coding_agent.gateway import CascadingChatModel
     from langchain_litellm import ChatLiteLLM
 
     def _stamp(m: ChatLiteLLM) -> None:
@@ -80,7 +80,7 @@ def build_agent(
     group_overrides: dict[str, str] | None = None,
     **deepagents_kwargs: Any,
 ) -> CompiledSubAgent:
-    """Build and return the top-level UST orchestrator agent.
+    """Build and return the top-level Governed Coding Agent orchestrator.
 
     The agent is wired with:
     - A Bedrock model resolved via gateway (role + data_class → policy → model)

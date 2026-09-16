@@ -8,7 +8,7 @@ let currentPty:      AgentTerminalPty | undefined;
 let currentTerminal: vscode.Terminal  | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
-  const out = vscode.window.createOutputChannel("UST Agent");
+  const out = vscode.window.createOutputChannel("Governed Coding Agent");
   client = new AgentClient(out);
 
   // ── Chat sidebar (WebviewView — primary UI) ─────────────────────────────
@@ -28,22 +28,22 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
 
-    vscode.commands.registerCommand("ust-agent.openTerminal", () => {
+    vscode.commands.registerCommand("governed-coding-agent.openTerminal", () => {
       ensureTerminal(out).then(([terminal]) => terminal.show(true));
     }),
 
-    vscode.commands.registerCommand("ust-agent.newSession", () => {
+    vscode.commands.registerCommand("governed-coding-agent.newSession", () => {
       chatProvider.startNewSession();
-      vscode.commands.executeCommand("ust-agent.chatView.focus");
+      vscode.commands.executeCommand("governed-coding-agent.chatView.focus");
     }),
 
-    vscode.commands.registerCommand("ust-agent.refreshSessions", () => {
+    vscode.commands.registerCommand("governed-coding-agent.refreshSessions", () => {
       if (client.isRunning()) client.send({ type: "sessions" });
     }),
 
-    vscode.commands.registerCommand("ust-agent.resumeSession", (threadId: string) => {
+    vscode.commands.registerCommand("governed-coding-agent.resumeSession", (threadId: string) => {
       chatProvider.resumeSession(threadId);
-      vscode.commands.executeCommand("ust-agent.chatView.focus");
+      vscode.commands.executeCommand("governed-coding-agent.chatView.focus");
     }),
 
     out,
@@ -69,7 +69,7 @@ async function ensureTerminal(
   }
 
   const pty      = new AgentTerminalPty(client, out);
-  const terminal = vscode.window.createTerminal({ name: "UST Agent", pty });
+  const terminal = vscode.window.createTerminal({ name: "Governed Coding Agent", pty });
 
   currentPty      = pty;
   currentTerminal = terminal;

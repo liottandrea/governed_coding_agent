@@ -30,12 +30,12 @@ from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_litellm import ChatLiteLLM
 
-from ust_agent import policy
+from governed_coding_agent import policy
 
 logger = logging.getLogger(__name__)
 
 
-_AGENT_HOME = Path(os.getenv("UST_AGENT_HOME", Path(__file__).parent.parent.parent))
+_AGENT_HOME = Path(os.getenv("GOVERNED_AGENT_HOME", Path(__file__).parent.parent.parent))
 _CONFIG_DIR = _AGENT_HOME / "config"
 _ROUTING_CONFIG = _CONFIG_DIR / "routing-rules.yaml"
 _LITELLM_CONFIG = _CONFIG_DIR / "litellm.config.yaml"

@@ -20,7 +20,7 @@ sys.path.insert(0, "src")
 
 LIVE = "--live" in sys.argv
 
-print("─── UST Coding Agent — Phase 0 hello-world ───")
+print("─── Governed Coding Agent — Phase 0 hello-world ───")
 print(f"  AWS_PROFILE = {os.environ.get('AWS_PROFILE', 'genai-agent-user')} (Bedrock)")
 print()
 
@@ -35,8 +35,8 @@ _lg_version = _meta.version("langgraph")
 print(f"✓ langgraph {_lg_version} imported")
 
 # 2. Gateway resolution
-from ust_agent.gateway import resolve_model, resolve_group
-from ust_agent.policy import PolicyError
+from governed_coding_agent.gateway import resolve_model, resolve_group
+from governed_coding_agent.policy import PolicyError
 
 group = resolve_group("codegen")
 print(f"✓ role 'codegen' → model group '{group}'")
@@ -56,8 +56,8 @@ except PolicyError as e:
 try:
     agent = da.create_deep_agent(
         model=model,
-        system_prompt="Hello from UST Coding Agent.",
-        name="ust-hello-world",
+        system_prompt="Hello from Governed Coding Agent.",
+        name="governed-hello-world",
     )
     print(f"✓ create_deep_agent() compiled: {type(agent).__name__}")
 except Exception as exc:
@@ -69,7 +69,7 @@ if LIVE:
     print("\n─── Live Bedrock call (--live) ───")
     from langchain_core.messages import HumanMessage
     try:
-        resp = model.invoke([HumanMessage(content="Reply with exactly: UST hello-world OK")])
+        resp = model.invoke([HumanMessage(content="Reply with exactly: hello-world OK")])
         print(f"✓ Bedrock response: {resp.content!r}")
     except Exception as exc:
         print(f"✗ Bedrock call failed: {exc}")

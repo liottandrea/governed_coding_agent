@@ -1,4 +1,4 @@
-"""UST Coding Agent — JSON-lines server mode for the VS Code extension.
+"""Governed Coding Agent — JSON-lines server mode for the VS Code extension.
 
 Driven by the extension via stdin/stdout (newline-delimited JSON).
 
@@ -38,7 +38,7 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-_AGENT_HOME = Path(os.getenv("UST_AGENT_HOME", Path(__file__).parent.parent.parent))
+_AGENT_HOME = Path(os.getenv("GOVERNED_AGENT_HOME", Path(__file__).parent.parent.parent))
 _stdout_lock = threading.Lock()
 
 
@@ -58,7 +58,7 @@ def _ensure_checkpointer():
     global _checkpointer, _checkpointer_ctx
     if _checkpointer is None:
         from langgraph.checkpoint.postgres import PostgresSaver
-        from ust_agent.cli import _dsn
+        from governed_coding_agent.cli import _dsn
         _checkpointer_ctx = PostgresSaver.from_conn_string(_dsn())
         _checkpointer = _checkpointer_ctx.__enter__()
         _checkpointer.setup()
@@ -79,10 +79,10 @@ class AgentSession:
 
     def start(self, cmd: dict) -> None:
         """Initialise (or resume) an agent session from a 'start' command."""
-        from ust_agent.harness import build_agent
-        from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
-        from ust_agent import observability
-        from ust_agent.cli import _SYSTEM_PROMPT_TEMPLATE
+        from governed_coding_agent.harness import build_agent
+        from governed_coding_agent.knowledge.retrieve import retrieve_knowledge_tool
+        from governed_coding_agent import observability
+        from governed_coding_agent.cli import _SYSTEM_PROMPT_TEMPLATE
 
         observability.configure()
 
@@ -182,7 +182,7 @@ class AgentSession:
 
 def _list_sessions() -> None:
     import psycopg
-    from ust_agent.cli import _dsn
+    from governed_coding_agent.cli import _dsn
 
     sql = """
         SELECT thread_id, max((metadata->>'step')::int) AS turns

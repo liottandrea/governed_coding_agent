@@ -1,6 +1,6 @@
-"""UST utility: robust CSV parsing with schema validation.
+"""Utility: robust CSV parsing with schema validation.
 
-Common pattern used across UST data-engineering projects to load
+Common pattern used across data-engineering projects to load
 tabular source files with consistent error handling and type coercion.
 """
 from __future__ import annotations

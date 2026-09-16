@@ -1,6 +1,6 @@
-# UST Code Authoring Style
+# Code Authoring Style
 
-You are writing code for a UST delivery project. Follow every rule below exactly.
+You are writing code for an engineering project. Follow every rule below exactly.
 Deviation requires explicit justification in a comment.
 
 ## Module structure
@@ -12,7 +12,7 @@ from __future__ import annotations
 Then import groups separated by a blank line:
 1. stdlib (`import os`, `from pathlib import Path`, ...)
 2. third-party (`import psycopg`, `from pydantic import BaseModel`, ...)
-3. local (`from ust_agent.gateway import resolve_model`, ...)
+3. local (`from governed_coding_agent.gateway import resolve_model`, ...)
 
 A module-level logger is required in any module that logs:
 ```python

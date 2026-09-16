@@ -1,8 +1,8 @@
 """Phase 4 verification: Code Authoring sub-agent.
 
 Demonstrates:
-  1. Agent retrieves UST knowledge first (citation check).
-  2. Agent writes a UST-styled Python module (write_file approved).
+  1. Agent retrieves prior knowledge first (citation check).
+  2. Agent writes a house-styled Python module (write_file approved).
   3. Agent executes the generated module (execute approved).
   4. Langfuse trace is created.
 
@@ -26,7 +26,7 @@ os.chdir(ROOT)
 
 # ── 1. Import guard ──────────────────────────────────────────────────────────
 
-from ust_agent.subagents.code_authoring import build_code_authoring_agent, run
+from governed_coding_agent.subagents.code_authoring import build_code_authoring_agent, run
 
 
 def section(title: str) -> None:
@@ -50,22 +50,22 @@ print("  PASS: agent built with HITL nodes")
 # ── 3. retrieve_knowledge_tool smoke test ────────────────────────────────────
 
 section("3. retrieve_knowledge_tool (live Bedrock embed)")
-from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
+from governed_coding_agent.knowledge.retrieve import retrieve_knowledge_tool
 
 result = retrieve_knowledge_tool.invoke({"query": "parse CSV file", "top_k": 3})
 print(textwrap.indent(result[:600] + ("..." if len(result) > 600 else ""), "  "))
-assert "UST snippet" in result or "No relevant" in result, "Unexpected tool output"
+assert "relevant snippet" in result or "No relevant" in result, "Unexpected tool output"
 print("  PASS: retrieve_knowledge_tool returns formatted output")
 
 # ── 4. Live auto_approve run ─────────────────────────────────────────────────
 
 section("4. Full auto-approve run (write_file + execute)")
 TASK = (
-    "Create a Python module at /ust_workspace/ust_email_check.py that:\n"
-    "1. Imports the ValidationResult pattern from UST prior work.\n"
+    "Create a Python module at /governed_workspace/email_check.py that:\n"
+    "1. Imports the ValidationResult pattern from prior work.\n"
     "2. Exposes a function validate_email(email: str) -> ValidationResult.\n"
     "3. Prints 'ok' to stdout when run as __main__ with a valid email.\n"
-    "Follow UST code style exactly (from __future__ import annotations, "
+    "Follow the house code style exactly (from __future__ import annotations, "
     "dataclass, pathlib, Google docstrings, snake_case)."
 )
 

@@ -28,7 +28,7 @@ classes:
       - local_fast
       - local_standard
       - local_heavy
-    description: "UST internal work — Bedrock or local inference"
+    description: "Internal work — Bedrock or local inference"
 
   restricted:
     allowed_groups:

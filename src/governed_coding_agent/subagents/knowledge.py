@@ -1,12 +1,12 @@
 """Knowledge sub-agent.
 
-Exposes UST's prior-work retrieval as a DeepAgents sub-agent.
+Exposes prior-work retrieval as a DeepAgents sub-agent.
 The orchestrator calls this agent by name; it answers with code snippets
 and citations from the pgvector knowledge store.
 
 Usage (standalone):
-    from ust_agent.subagents.knowledge import build_knowledge_agent, ask
-    answer = ask("Has UST built a CSV parser before?")
+    from governed_coding_agent.subagents.knowledge import build_knowledge_agent, ask
+    answer = ask("Has this project built a CSV parser before?")
     print(answer)
 """
 from __future__ import annotations
@@ -15,16 +15,16 @@ import logging
 
 import deepagents
 
-from ust_agent.gateway import resolve_model
-from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
+from governed_coding_agent.gateway import resolve_model
+from governed_coding_agent.knowledge.retrieve import retrieve_knowledge_tool
 
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are the UST Knowledge Agent. Your job is to answer questions about
-prior UST code by searching the knowledge store.
+You are the Governed Coding Agent's Knowledge sub-agent. Your job is to answer questions about
+prior code by searching the knowledge store.
 
-When asked whether UST has built something, ALWAYS call retrieve_knowledge_tool
+When asked whether this project has built something, ALWAYS call retrieve_knowledge_tool
 first. Include citations (file path, symbol, commit) in your answer.
 Flag any deprecated snippets clearly.
 

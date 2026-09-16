@@ -1,10 +1,10 @@
-"""UST Coding Agent — end-to-end accelerator demo (Phase 6).
+"""Governed Coding Agent — end-to-end accelerator demo (Phase 6).
 
 Demonstrates the full agent stack on a single delivery feature request:
 
   1. Code Authoring sub-agent
-     - Searches UST knowledge store for prior patterns
-     - Generates a UST-styled Python module grounded in those patterns
+     - Searches the knowledge store for prior patterns
+     - Generates a house-styled Python module grounded in those patterns
      - Writes the file to the virtual filesystem (HITL gate → auto-approved)
 
   2. Testing sub-agent  [routing: cheap → mid cascade]
@@ -70,19 +70,19 @@ def main() -> None:
         " ".join(sys.argv[1:])
         if len(sys.argv) > 1
         else (
-            "Build a Python module ust_phone_validator.py that exposes "
+            "Build a Python module phone_validator.py that exposes "
             "a validate_phone(number: str) -> ValidationResult function. "
-            "It must follow UST patterns for ValidationResult, use a regex "
+            "It must follow the house patterns for ValidationResult, use a regex "
             "for E.164 format (+<country_code><number>), and print a demo "
             "when run as __main__ with both a valid and an invalid number."
         )
     )
 
-    banner("UST CODING AGENT — ACCELERATOR DEMO")
+    banner("GOVERNED CODING AGENT — ACCELERATOR DEMO")
     print(f"\n  Feature request:\n")
     print(textwrap.indent(textwrap.fill(feature_request, width=_WIDTH - 4), "  "))
 
-    from ust_agent import observability
+    from governed_coding_agent import observability
     observability.configure()
 
     # ── Step 1: Code Authoring ────────────────────────────────────────────────
@@ -92,7 +92,7 @@ def main() -> None:
     print("  Tools: retrieve_knowledge_tool, write_file, execute")
     print("  HITL:  auto-approved for demo\n")
 
-    from ust_agent.subagents.code_authoring import run as ca_run
+    from governed_coding_agent.subagents.code_authoring import run as ca_run
 
     t0 = time.monotonic()
     ca_output = ca_run(feature_request, data_class="internal", auto_approve=True)
@@ -120,13 +120,13 @@ def main() -> None:
     print("  Tools: retrieve_knowledge_tool, write_file, execute")
     print("  HITL:  auto-approved for demo\n")
 
-    from ust_agent.subagents.testing import run as test_run
+    from governed_coding_agent.subagents.testing import run as test_run
 
     test_task = (
         f"Write a pytest test suite for the module written to {generated_path}. "
-        "Search the knowledge store for UST validation patterns and test examples. "
-        f"Write the tests to /ust_workspace/test_{Path(generated_path).name}. "
-        f"Run them with: python -m pytest /ust_workspace/test_{Path(generated_path).name} -v"
+        "Search the knowledge store for validation patterns and test examples. "
+        f"Write the tests to /governed_workspace/test_{Path(generated_path).name}. "
+        f"Run them with: python -m pytest /governed_workspace/test_{Path(generated_path).name} -v"
     )
 
     t1 = time.monotonic()

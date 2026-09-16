@@ -1,6 +1,6 @@
-"""UST utility: PostgreSQL client wrapper with connection pooling.
+"""Utility: PostgreSQL client wrapper with connection pooling.
 
-Standard pattern used in UST backend services to manage Postgres connections
+Standard pattern used in backend services to manage Postgres connections
 with a context-manager interface and structured error logging.
 """
 from __future__ import annotations

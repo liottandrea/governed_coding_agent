@@ -69,8 +69,8 @@ export class ChatPanel {
     }
 
     const panel = vscode.window.createWebviewPanel(
-      "ustAgentChat",
-      "UST Agent",
+      "governedCodingAgentChat",
+      "Governed Coding Agent",
       column,
       {
         enableScripts: true,

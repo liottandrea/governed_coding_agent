@@ -26,42 +26,42 @@ def test_langgraph_importable() -> None:
 
 def test_gateway_resolve_group() -> None:
     os.chdir(ROOT)
-    from ust_agent.gateway import resolve_group
+    from governed_coding_agent.gateway import resolve_group
     group = resolve_group("codegen")
     assert group == "frontier"
 
 
 def test_gateway_resolve_group_unknown_role() -> None:
     os.chdir(ROOT)
-    from ust_agent.gateway import resolve_group
+    from governed_coding_agent.gateway import resolve_group
     with pytest.raises(ValueError, match="Unknown role"):
         resolve_group("nonexistent_role")
 
 
 def test_policy_allows_valid_combination() -> None:
     os.chdir(ROOT)
-    from ust_agent.policy import check
+    from governed_coding_agent.policy import check
     # internal + frontier should be allowed
     check("internal", "frontier")
 
 
 def test_policy_blocks_restricted_to_frontier() -> None:
     os.chdir(ROOT)
-    from ust_agent.policy import check, PolicyError
+    from governed_coding_agent.policy import check, PolicyError
     with pytest.raises(PolicyError):
         check("restricted", "frontier")
 
 
 def test_policy_blocks_unknown_class() -> None:
     os.chdir(ROOT)
-    from ust_agent.policy import check, PolicyError
+    from governed_coding_agent.policy import check, PolicyError
     with pytest.raises(PolicyError, match="Unknown data class"):
         check("top_secret", "cheap")
 
 
 def test_resolve_model_returns_chat_litellm() -> None:
     os.chdir(ROOT)
-    from ust_agent.gateway import resolve_model
+    from governed_coding_agent.gateway import resolve_model
     from langchain_litellm import ChatLiteLLM
     model = resolve_model("codegen", "internal")
     assert isinstance(model, ChatLiteLLM)
@@ -73,7 +73,7 @@ def test_resolve_model_returns_chat_litellm() -> None:
 
 def test_resolve_model_restricted_raises_policy_error() -> None:
     os.chdir(ROOT)
-    from ust_agent.gateway import resolve_model
-    from ust_agent.policy import PolicyError
+    from governed_coding_agent.gateway import resolve_model
+    from governed_coding_agent.policy import PolicyError
     with pytest.raises(PolicyError):
         resolve_model("codegen", "restricted")

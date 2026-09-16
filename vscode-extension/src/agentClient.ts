@@ -4,7 +4,7 @@ import * as readline from "readline";
 import { AgentEvent, ServerCommand } from "./types";
 
 /**
- * Manages the ust-agent --server subprocess and the JSON-lines protocol.
+ * Manages the governed-coding-agent --server subprocess and the JSON-lines protocol.
  * Emits typed AgentEvents via the onEvent callback.
  */
 export class AgentClient {
@@ -40,13 +40,13 @@ export class AgentClient {
       return;
     }
 
-    const config = vscode.workspace.getConfiguration("ustAgent");
-    const binary: string = config.get("binaryPath") || "ust-agent";
+    const config = vscode.workspace.getConfiguration("governedCodingAgent");
+    const binary: string = config.get("binaryPath") || "governed-coding-agent";
     const agentHome: string = config.get("agentHome") || "";
 
     const env: NodeJS.ProcessEnv = { ...process.env };
     if (agentHome) {
-      env["UST_AGENT_HOME"] = agentHome;
+      env["GOVERNED_AGENT_HOME"] = agentHome;
     }
 
     this.outputChannel.appendLine(`[AgentClient] spawning: ${binary} --server`);
@@ -63,7 +63,7 @@ export class AgentClient {
 
     this.process.on("error", (err) => {
       this.outputChannel.appendLine(`[AgentClient] spawn error: ${err.message}`);
-      this.emit({ type: "error", message: `Could not start ust-agent: ${err.message}` });
+      this.emit({ type: "error", message: `Could not start governed-coding-agent: ${err.message}` });
     });
 
     this.process.on("exit", (code) => {

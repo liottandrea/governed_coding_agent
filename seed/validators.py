@@ -1,6 +1,6 @@
-"""UST utility: reusable data validation helpers.
+"""Utility: reusable data validation helpers.
 
-Used across UST ingestion pipelines and API layers to validate
+Used across ingestion pipelines and API layers to validate
 incoming data with consistent error messages and field-level reporting.
 """
 from __future__ import annotations

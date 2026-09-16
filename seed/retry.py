@@ -1,6 +1,6 @@
-"""UST utility: retry decorator with exponential back-off.
+"""Utility: retry decorator with exponential back-off.
 
-Standard pattern used in UST integration code to wrap flaky external
+Standard pattern used in integration code to wrap flaky external
 calls (APIs, DB writes) with configurable retry logic.
 """
 from __future__ import annotations

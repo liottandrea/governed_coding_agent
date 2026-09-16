@@ -1,10 +1,10 @@
-# UST Coding Agent
+# Governed Coding Agent
 
 Model-neutral, governed coding agent built on [DeepAgents](https://github.com/anthropics/deepagents) + LangGraph.
 
-Given a delivery feature request it:
-1. **Retrieves** prior UST code patterns from a pgvector knowledge store
-2. **Authors** a UST-styled Python module grounded in those patterns (HITL gate)
+Given a feature request it:
+1. **Retrieves** prior code patterns from a pgvector knowledge store
+2. **Authors** a house-styled Python module grounded in those patterns (HITL gate)
 3. **Generates** a parametrized pytest suite for the module (HITL gate)
 4. **Executes** both in the built-in sandbox and reports citations + pass/fail
 5. **Traces** every model call to Langfuse
@@ -16,7 +16,7 @@ sensitive code from ever reaching an external API.
 
 ## Using as a coding assistant
 
-`ust-agent` is a terminal-based coding assistant — a governed, knowledge-grounded
+`governed-coding-agent` is a terminal-based coding assistant — a governed, knowledge-grounded
 alternative to Claude Code. Once installed, run it from **any project directory**
 on your machine, not just inside this repo.
 
@@ -25,30 +25,30 @@ on your machine, not just inside this repo.
 `start.sh` handles this automatically. To do it manually:
 
 ```bash
-cd ~/Documents/repos/ust_coding_agent
+cd ~/Documents/repos/governed-coding-agent
 uv tool install -e .        # editable: config files stay in this repo
 ```
 
-`ust-agent` is then on `$PATH` via uv's tool shims (`~/.local/bin/ust-agent`).
+`governed-coding-agent` is then on `$PATH` via uv's tool shims (`~/.local/bin/governed-coding-agent`).
 Make sure `~/.local/bin` is in your `PATH` (uv prints a reminder if it isn't).
 
 ### Daily workflow
 
 ```bash
 # 1. Start shared services once per day (from this repo)
-cd ~/Documents/repos/ust_coding_agent
+cd ~/Documents/repos/governed-coding-agent
 ./start.sh
 
 # 2. Go to any project and work
 cd ~/Documents/repos/my-client-service
-ust-agent                                       # interactive REPL
-ust-agent "Add type hints to all public functions in src/"   # single-shot
-ust-agent --data-class restricted               # local models only
+governed-coding-agent                                       # interactive REPL
+governed-coding-agent "Add type hints to all public functions in src/"   # single-shot
+governed-coding-agent --data-class restricted               # local models only
 ```
 
 The agent reads and writes files in your **current working directory**. The
 shared services (Postgres, Langfuse, knowledge store, models) are centralised in
-the `ust_coding_agent` installation — they don't need to be present in each repo.
+this installation — they don't need to be present in each repo.
 
 ### Adding a repo's patterns to the knowledge store
 
@@ -59,13 +59,13 @@ any repo so the agent can reference them from other projects:
 # Quick: drop a file into seed/ and re-ingest (idempotent)
 cp ~/Documents/repos/my-service/src/retry.py seed/
 uv run python -c "
-from ust_agent.knowledge.ingest import ingest_seed
+from governed_coding_agent.knowledge.ingest import ingest_seed
 print(ingest_seed(), 'chunks ingested')
 "
 
 # Targeted: ingest a specific file without copying it
 uv run python -c "
-from ust_agent.knowledge.ingest import chunk_python_file, load_chunks
+from governed_coding_agent.knowledge.ingest import chunk_python_file, load_chunks
 from pathlib import Path
 src = Path('../my-service/src/auth.py').read_text()  # or absolute path
 chunks = chunk_python_file(src, path='auth.py', repo='my-service')
@@ -81,7 +81,7 @@ future task in any repo.
 
 ```bash
 cd ~/Documents/repos/regulated-project
-ust-agent --data-class restricted
+governed-coding-agent --data-class restricted
 ```
 
 `restricted` routes exclusively to local Ollama — nothing leaves the machine.
@@ -92,35 +92,35 @@ No Bedrock calls, no external telemetry beyond what's running on localhost.
 
 ```bash
 # Interactive REPL (like running `claude`)
-ust-agent
+governed-coding-agent
 
 # Single-shot task
-ust-agent "Refactor the CSV parser to use our retry decorator pattern"
+governed-coding-agent "Refactor the CSV parser to use our retry decorator pattern"
 
 # Resume a previous session (persisted in Postgres — survives restarts)
-ust-agent --session <thread-id>
+governed-coding-agent --session <thread-id>
 
 # List all saved sessions
-ust-agent --list-sessions
+governed-coding-agent --list-sessions
 
 # Restricted data — routes to local Ollama, never Bedrock
-ust-agent --data-class restricted
+governed-coding-agent --data-class restricted
 
 # Non-interactive / CI
-ust-agent --auto-approve "Add type hints to all public functions in src/"
+governed-coding-agent --auto-approve "Add type hints to all public functions in src/"
 ```
 
 ### What happens in a session
 
 ```
 ╔══════════════════════════════════════════════════════╗
-║          UST Coding Agent  —  interactive            ║
+║          Governed Coding Agent  —  interactive            ║
 ║  Type your task. 'exit' or Ctrl+C to quit.          ║
 ╚══════════════════════════════════════════════════════╝
   session   : a3f2c8d1-4e9b-4f1a-b2c3-d4e5f6a7b8c9
   data class: internal
   directory : /Users/you/projects/my-service
-  resume    : ust-agent --session a3f2c8d1-...
+  resume    : governed-coding-agent --session a3f2c8d1-...
   history   : persisted in Postgres
 
 ▶ Add input validation to the payment processor
@@ -136,11 +136,11 @@ ust-agent --auto-approve "Add type hints to all public functions in src/"
 ```
 
 For every task the agent:
-1. Calls `retrieve_knowledge_tool` to find relevant UST prior patterns
+1. Calls `retrieve_knowledge_tool` to find relevant prior patterns
 2. Reads your existing files with `read_file` / `glob` / `grep`
 3. Writes or edits code — pausing for your approval before touching the filesystem
 4. Runs `execute` to verify (tests, linters) — again with approval
-5. Cites the UST pattern used at the top of any new file
+5. Cites the pattern used at the top of any new file
 
 ### Session persistence
 
@@ -150,7 +150,7 @@ tool call, and agent decision — survives process restarts.
 
 ```bash
 # See all your saved sessions
-ust-agent --list-sessions
+governed-coding-agent --list-sessions
 
 # Thread ID   Created              Turns
 # ─────────────────────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ ust-agent --list-sessions
 # 7b1e4f22-…  2026-06-14 16:45:00  6
 
 # Pick up exactly where you left off
-ust-agent --session a3f2c8d1-4e9b-4f1a-b2c3-d4e5f6a7b8c9
+governed-coding-agent --session a3f2c8d1-4e9b-4f1a-b2c3-d4e5f6a7b8c9
 ```
 
 The checkpoint tables (`checkpoints`, `checkpoint_blobs`, `checkpoint_writes`)
@@ -171,10 +171,10 @@ are created automatically on first run via `checkpointer.setup()`.
 ### One-command startup
 
 ```bash
-git clone <repo-url> && cd ust_coding_agent
+git clone <repo-url> && cd governed-coding-agent
 cp .env.example .env          # fill in AWS_PROFILE at minimum
 ./start.sh                    # checks prerequisites, starts everything, seeds DB
-ust-agent                     # open the interactive REPL
+governed-coding-agent                     # open the interactive REPL
 ```
 
 `start.sh` is idempotent — safe to re-run at any time. It:
@@ -217,8 +217,8 @@ uv sync
 # Initialise the database schema
 uv run python scripts/init_db.py
 
-# Ingest the seed UST code corpus into pgvector
-uv run python -c "from ust_agent.knowledge.ingest import ingest_seed; print(ingest_seed(), 'chunks ingested')"
+# Ingest the seed code corpus into pgvector
+uv run python -c "from governed_coding_agent.knowledge.ingest import ingest_seed; print(ingest_seed(), 'chunks ingested')"
 
 # Smoke test — no API call
 uv run python scripts/hello_world.py
@@ -238,7 +238,7 @@ uv run python scripts/demo.py
 uv run python scripts/demo.py
 
 # Custom task
-uv run python scripts/demo.py "Build a rate-limiter utility following UST patterns"
+uv run python scripts/demo.py "Build a rate-limiter utility following house patterns"
 ```
 
 The demo runs two agents automatically (HITL auto-approved) and prints:
@@ -248,25 +248,25 @@ Step 1 — Code Authoring   frontier model, Bedrock
 Step 2 — Testing          cheap → mid cascade, Bedrock
 ...
 DELIVERY SUMMARY
-  Code file   /ust_workspace/ust_<module>.py
-  Test file   /ust_workspace/test_ust_<module>.py
+  Code file   /governed_workspace/<module>.py
+  Test file   /governed_workspace/test_<module>.py
   Total       ~4 min
 ```
 
 ### Call sub-agents directly from Python
 
 ```python
-from ust_agent.subagents.code_authoring import run as ca_run
-from ust_agent.subagents.testing import run as test_run
-from ust_agent.subagents.knowledge import ask
+from governed_coding_agent.subagents.code_authoring import run as ca_run
+from governed_coding_agent.subagents.testing import run as test_run
+from governed_coding_agent.subagents.knowledge import ask
 
 # Ask the knowledge store a question
-answer = ask("Has UST built a retry decorator before?")
+answer = ask("Has this project built a retry decorator before?")
 print(answer)
 
 # Generate a module (interactive HITL by default)
 result = ca_run(
-    "Build a UST-styled JSON schema validator",
+    "Build a house-styled JSON schema validator",
     data_class="internal",
     auto_approve=False,   # set True to skip prompts
 )
@@ -274,7 +274,7 @@ print(result["files"])   # virtual filesystem state
 
 # Generate tests for the output
 test_result = test_run(
-    "Write pytest tests for /ust_workspace/ust_json_validator.py",
+    "Write pytest tests for /governed_workspace/json_validator.py",
     data_class="internal",
     auto_approve=True,
 )
@@ -283,10 +283,10 @@ test_result = test_run(
 ### Use the top-level orchestrator
 
 ```python
-from ust_agent.harness import run
+from governed_coding_agent.harness import run
 
 result = run(
-    "Write a CSV → Postgres ETL pipeline following UST data-engineering patterns",
+    "Write a CSV → Postgres ETL pipeline following house data-engineering patterns",
     role="planner",
     data_class="internal",
     auto_approve=False,
@@ -300,9 +300,9 @@ Drop `.py` files into `seed/`. Files with `_deprecated` in the filename are
 automatically flagged as deprecated (still retrieved but marked with ⚠).
 
 ```bash
-cp my_ust_module.py seed/
+cp my_module.py seed/
 uv run python -c "
-from ust_agent.knowledge.ingest import ingest_seed
+from governed_coding_agent.knowledge.ingest import ingest_seed
 print(ingest_seed(), 'chunks ingested')
 "
 ```
@@ -310,7 +310,7 @@ print(ingest_seed(), 'chunks ingested')
 Or ingest individual chunks programmatically:
 
 ```python
-from ust_agent.knowledge.ingest import chunk_python_file, load_chunks
+from governed_coding_agent.knowledge.ingest import chunk_python_file, load_chunks
 
 source = Path("my_module.py").read_text()
 chunks = chunk_python_file(source, path="my_module.py", repo="my-project")
@@ -324,7 +324,7 @@ Every task carries a `data_class` that controls which model groups may be used:
 | Data class | Allowed groups | Use when |
 |------------|---------------|----------|
 | `public` | all | No sensitivity |
-| `internal` | Bedrock + local | Default for UST delivery work |
+| `internal` | Bedrock + local | Default for internal engineering work |
 | `restricted` | local only (`local_fast`, `local_standard`, `local_heavy`) | Regulated or confidential code |
 
 ```python
@@ -339,7 +339,7 @@ When `auto_approve=False` (the default) the agent pauses before every
 
 ```
 ⚠  Approval required: write_file
-   Args: {'file_path': '/ust_workspace/ust_validator.py', 'content': '...'}
+   Args: {'file_path': '/governed_workspace/validator.py', 'content': '...'}
    Approve? [y/n]
 ```
 
@@ -372,28 +372,28 @@ scripts/
   hello_world.py           ← Phase 0 smoke test
   phase[1-5]_verify.py     ← per-phase acceptance scripts
 
-src/ust_agent/
+src/governed_coding_agent/
   harness.py               ← top-level orchestrator (DeepAgents + HITL)
   gateway.py               ← LiteLLM gateway; resolve_model() + CascadingChatModel
   policy.py                ← data-class policy enforcement (PolicyError)
   observability.py         ← Langfuse callback wiring (idempotent)
   subagents/
     knowledge.py           ← Knowledge sub-agent (retrieval + citations)
-    code_authoring.py      ← Code Authoring sub-agent (UST style + HITL)
+    code_authoring.py      ← Code Authoring sub-agent (house style + HITL)
     testing.py             ← Testing sub-agent (pytest generation + cascade)
   knowledge/
     ingest.py              ← tree-sitter chunking + embed + pgvector upsert
     retrieve.py            ← pgvector cosine search + Citation dataclass
   skills/
-    code-authoring/SKILL.md  ← UST Python style guide injected into agent prompt
-    testing/SKILL.md         ← UST pytest style guide injected into agent prompt
+    code-authoring/SKILL.md  ← Python style guide injected into agent prompt
+    testing/SKILL.md         ← pytest style guide injected into agent prompt
 
 config/
   litellm.config.yaml      ← model group → Bedrock/Ollama model ID
   routing-rules.yaml       ← role → group mapping (+ optional fallback_group)
   data-classes.yaml        ← allowed groups per data class
 
-seed/                      ← curated UST code corpus (ingested into pgvector)
+seed/                      ← curated code corpus (ingested into pgvector)
 docker-compose.yml         ← postgres:pgvector16 + langfuse:2
 ```
 
@@ -440,7 +440,7 @@ Copy `.env.example` to `.env` and set:
 | `LANGFUSE_PUBLIC_KEY` | yes | From Langfuse → Settings → API Keys |
 | `LANGFUSE_SECRET_KEY` | yes | From Langfuse → Settings → API Keys |
 | `LANGFUSE_HOST` | yes | `http://localhost:13000` for local docker |
-| `POSTGRES_*` | yes | Match values in `docker-compose.yml` |
+| `POSTGRES_*` | yes | Set your own values; must match what you put in `docker-compose.yml`/`.env` |
 | `OLLAMA_BASE_URL` | no | Only needed for local/restricted routing |
 | `DEFAULT_DATA_CLASS` | no | `internal` (default) |
 
@@ -451,12 +451,9 @@ Langfuse keys are seeded automatically by docker-compose. Retrieve them from
 
 ## Observability
 
-Every run is traced. Open `http://localhost:13000` with:
-
-```
-email:    admin@ust-agent.local
-password: UstAgent2024!
-```
+Every run is traced. Open `http://localhost:13000` and log in with the
+`LANGFUSE_INIT_USER_EMAIL` / `LANGFUSE_INIT_USER_PASSWORD` values you set in
+your `.env`.
 
 Each trace shows the full model call chain: token counts, latency per step,
 and which model group was used (useful for verifying cascade behaviour).
@@ -476,8 +473,8 @@ uv run python scripts/demo.py           # full end-to-end
 
 ### Adding a new sub-agent
 
-1. Create `src/ust_agent/subagents/<name>.py` following the pattern in `testing.py`
-2. Add a skill guide at `src/ust_agent/skills/<name>/SKILL.md`
+1. Create `src/governed_coding_agent/subagents/<name>.py` following the pattern in `testing.py`
+2. Add a skill guide at `src/governed_coding_agent/skills/<name>/SKILL.md`
 3. Add a role entry in `config/routing-rules.yaml`
 4. Wire it into `demo.py` or call `run()` directly
 

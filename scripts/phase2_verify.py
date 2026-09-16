@@ -17,17 +17,17 @@ sys.path.insert(0, "src")
 from dotenv import load_dotenv
 load_dotenv()
 
-from ust_agent import observability
+from governed_coding_agent import observability
 observability.configure()
 
-from ust_agent.harness import run as agent_run
+from governed_coding_agent.harness import run as agent_run
 
 print("─── Phase 2: harness skeleton + human-in-the-loop ───")
 print()
 
 TASK = (
     "Write a Python function called `add(a, b)` that returns a + b. "
-    "Save it to /ust_workspace/math_utils.py. "
+    "Save it to /governed_workspace/math_utils.py. "
     "Include a one-line docstring."
 )
 

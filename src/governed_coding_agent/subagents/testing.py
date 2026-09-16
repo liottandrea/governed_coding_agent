@@ -1,7 +1,7 @@
 """Testing sub-agent.
 
 Generates pytest tests for code produced by the Code Authoring sub-agent.
-The agent consults the UST knowledge store for existing test patterns before
+The agent consults the knowledge store for existing test patterns before
 writing new tests, then executes them in the built-in sandbox to confirm they pass.
 
 Routing: testing role → cheap (Haiku) with fallback → mid (Sonnet) so the
@@ -18,27 +18,27 @@ from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
 
-from ust_agent import observability
-from ust_agent.gateway import resolve_model
-from ust_agent.knowledge.retrieve import retrieve_knowledge_tool
+from governed_coding_agent import observability
+from governed_coding_agent.gateway import resolve_model
+from governed_coding_agent.knowledge.retrieve import retrieve_knowledge_tool
 
 logger = logging.getLogger(__name__)
 
 _SKILL_PATH = Path(__file__).parent.parent / "skills" / "testing" / "SKILL.md"
 
 _BASE_SYSTEM_PROMPT = """\
-You are the UST Test Authoring Agent. You write high-quality pytest tests for
-UST delivery project code.
+You are the Governed Coding Agent's Test Authoring sub-agent. You write high-quality pytest tests for
+engineering project code.
 
 For EVERY testing task you must:
-1. Call retrieve_knowledge_tool FIRST to find existing UST test patterns and
+1. Call retrieve_knowledge_tool FIRST to find existing test patterns and
    the code being tested.
 2. Write a complete pytest test file using write_file.
    - Name it test_<module_name>.py in the same directory or tests/.
    - Cite the source module and any knowledge snippets used in a comment header.
 3. Execute the test file using the execute tool:
    execute with command "python -m pytest <filepath> -v"
-4. Report: test file path, pass/fail count, and which UST patterns were reused.
+4. Report: test file path, pass/fail count, and which patterns were reused.
 
 If tests fail, investigate and fix before reporting done.
 NEVER report success without running the tests.

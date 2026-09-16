@@ -21,7 +21,7 @@ def _load_env() -> None:
 
 def test_resolve_fallback_group_testing_role() -> None:
     _load_env()
-    from ust_agent.gateway import resolve_fallback_group
+    from governed_coding_agent.gateway import resolve_fallback_group
 
     fb = resolve_fallback_group("testing")
     assert fb is not None
@@ -30,7 +30,7 @@ def test_resolve_fallback_group_testing_role() -> None:
 
 def test_resolve_fallback_group_differs_from_primary() -> None:
     _load_env()
-    from ust_agent.gateway import resolve_fallback_group, resolve_group
+    from governed_coding_agent.gateway import resolve_fallback_group, resolve_group
 
     primary = resolve_group("testing")
     fb = resolve_fallback_group("testing")
@@ -39,7 +39,7 @@ def test_resolve_fallback_group_differs_from_primary() -> None:
 
 def test_resolve_fallback_group_returns_none_for_no_fallback() -> None:
     _load_env()
-    from ust_agent.gateway import resolve_fallback_group
+    from governed_coding_agent.gateway import resolve_fallback_group
 
     # codegen has no fallback_group in routing-rules.yaml
     assert resolve_fallback_group("codegen") is None
@@ -47,7 +47,7 @@ def test_resolve_fallback_group_returns_none_for_no_fallback() -> None:
 
 def test_resolve_model_testing_returns_cascading_model() -> None:
     _load_env()
-    from ust_agent.gateway import resolve_model, CascadingChatModel
+    from governed_coding_agent.gateway import resolve_model, CascadingChatModel
 
     model = resolve_model("testing", "internal")
     assert isinstance(model, CascadingChatModel)
@@ -56,7 +56,7 @@ def test_resolve_model_testing_returns_cascading_model() -> None:
 def test_resolve_model_codegen_returns_plain_chat_litellm() -> None:
     """Roles without a fallback_group must not be wrapped."""
     _load_env()
-    from ust_agent.gateway import resolve_model, CascadingChatModel
+    from governed_coding_agent.gateway import resolve_model, CascadingChatModel
     from langchain_litellm import ChatLiteLLM
 
     model = resolve_model("codegen", "internal")
@@ -67,7 +67,7 @@ def test_resolve_model_codegen_returns_plain_chat_litellm() -> None:
 def test_restricted_data_class_skips_fallback_if_forbidden() -> None:
     """If the fallback group is not allowed for data_class, fall back to primary only."""
     _load_env()
-    from ust_agent.gateway import resolve_model
+    from governed_coding_agent.gateway import resolve_model
     from langchain_litellm import ChatLiteLLM
     from langchain_core.runnables import RunnableWithFallbacks
 
@@ -75,7 +75,7 @@ def test_restricted_data_class_skips_fallback_if_forbidden() -> None:
     # So resolve_model should return a plain ChatLiteLLM (primary=local) or raise.
     # The testing role's primary is 'cheap' which is also Bedrock — both primary
     # and fallback are forbidden for restricted → PolicyError.
-    from ust_agent.policy import PolicyError
+    from governed_coding_agent.policy import PolicyError
     with pytest.raises(PolicyError):
         resolve_model("testing", "restricted")
 
@@ -83,7 +83,7 @@ def test_restricted_data_class_skips_fallback_if_forbidden() -> None:
 def test_all_roles_still_resolve_after_cascade_change() -> None:
     """Cascade addition must not break roles that have no fallback."""
     _load_env()
-    from ust_agent.gateway import resolve_model, CascadingChatModel
+    from governed_coding_agent.gateway import resolve_model, CascadingChatModel
     from langchain_litellm import ChatLiteLLM
 
     for role in ("planner", "codegen", "knowledge_retrieval", "embedding", "summary"):
@@ -97,7 +97,7 @@ def test_all_roles_still_resolve_after_cascade_change() -> None:
 
 def test_build_testing_agent_returns_compiled_graph() -> None:
     _load_env()
-    from ust_agent.subagents.testing import build_testing_agent
+    from governed_coding_agent.subagents.testing import build_testing_agent
     from langgraph.graph.state import CompiledStateGraph
 
     agent = build_testing_agent(data_class="internal")
@@ -106,7 +106,7 @@ def test_build_testing_agent_returns_compiled_graph() -> None:
 
 def test_build_testing_agent_has_hitl_node() -> None:
     _load_env()
-    from ust_agent.subagents.testing import build_testing_agent
+    from governed_coding_agent.subagents.testing import build_testing_agent
 
     agent = build_testing_agent(data_class="internal")
     node_names = list(agent.nodes.keys())
@@ -116,14 +116,14 @@ def test_build_testing_agent_has_hitl_node() -> None:
 
 def test_build_testing_agent_has_checkpointer() -> None:
     _load_env()
-    from ust_agent.subagents.testing import build_testing_agent
+    from governed_coding_agent.subagents.testing import build_testing_agent
 
     agent = build_testing_agent(data_class="internal")
     assert agent.checkpointer is not None
 
 
 def test_testing_skill_md_exists() -> None:
-    skill_path = ROOT / "src" / "ust_agent" / "skills" / "testing" / "SKILL.md"
+    skill_path = ROOT / "src" / "governed_coding_agent" / "skills" / "testing" / "SKILL.md"
     assert skill_path.exists()
     content = skill_path.read_text()
     assert "parametrize" in content
@@ -132,7 +132,7 @@ def test_testing_skill_md_exists() -> None:
 
 def test_testing_system_prompt_contains_skill_content() -> None:
     _load_env()
-    from ust_agent.subagents.testing import _build_system_prompt
+    from governed_coding_agent.subagents.testing import _build_system_prompt
 
     prompt = _build_system_prompt()
     assert "retrieve_knowledge_tool" in prompt
@@ -142,7 +142,7 @@ def test_testing_system_prompt_contains_skill_content() -> None:
 def test_testing_system_prompt_references_execute_step() -> None:
     """Prompt must instruct the agent to actually run the tests."""
     _load_env()
-    from ust_agent.subagents.testing import _build_system_prompt
+    from governed_coding_agent.subagents.testing import _build_system_prompt
 
     prompt = _build_system_prompt()
     assert "execute" in prompt.lower()
@@ -154,7 +154,7 @@ def test_testing_system_prompt_references_execute_step() -> None:
 def test_run_returns_expected_keys() -> None:
     _load_env()
     from langchain_core.messages import AIMessage
-    from ust_agent.subagents.testing import build_testing_agent
+    from governed_coding_agent.subagents.testing import build_testing_agent
 
     agent = build_testing_agent(data_class="internal")
     fake_msg = AIMessage(content="Tests passed.")
@@ -163,7 +163,7 @@ def test_run_returns_expected_keys() -> None:
 
     with patch.object(agent, "stream", return_value=iter([{"agent": {"messages": [fake_msg]}}])):
         with patch.object(agent, "get_state", return_value=fake_state):
-            from ust_agent.subagents.testing import run
+            from governed_coding_agent.subagents.testing import run
             result = run("dummy task", data_class="internal", auto_approve=True)
 
     assert "messages" in result

@@ -1,10 +1,10 @@
 """Knowledge retrieval from pgvector.
 
 Embeds a query through the gateway and returns the top-k most similar
-chunks from ust_chunks, assembled into Citation objects.
+chunks from code_chunks, assembled into Citation objects.
 
 Usage:
-    from ust_agent.knowledge.retrieve import retrieve
+    from governed_coding_agent.knowledge.retrieve import retrieve
     hits = retrieve("parse CSV file with type coercion", top_k=3)
     for c in hits:
         print(c.format())
@@ -19,7 +19,7 @@ import psycopg
 from langchain_core.tools import tool
 from pgvector.psycopg import register_vector
 
-from ust_agent import gateway
+from governed_coding_agent import gateway
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,8 @@ def _dsn() -> str:
     return (
         f"host={os.environ.get('POSTGRES_HOST','localhost')} "
         f"port={os.environ.get('POSTGRES_PORT','5432')} "
-        f"dbname={os.environ.get('POSTGRES_DB','ust_agent')} "
-        f"user={os.environ.get('POSTGRES_USER','ust_agent')} "
+        f"dbname={os.environ.get('POSTGRES_DB','governed_coding_agent')} "
+        f"user={os.environ.get('POSTGRES_USER','governed_coding_agent')} "
         f"password={os.environ.get('POSTGRES_PASSWORD','changeme')}"
     )
 
@@ -60,7 +60,7 @@ _SEARCH_SQL = """
 SELECT
     repo, path, commit, chunk_type, symbol, content, deprecated,
     1 - (embedding <=> %s::vector) AS score
-FROM ust_chunks
+FROM code_chunks
 ORDER BY embedding <=> %s::vector
 LIMIT %s;
 """
@@ -113,8 +113,8 @@ def retrieve(
 def format_for_prompt(citations: list[Citation]) -> str:
     """Format citations into a context block suitable for injection into a prompt."""
     if not citations:
-        return "No relevant UST prior work found for this query."
-    parts = [f"Found {len(citations)} relevant UST snippet(s):\n"]
+        return "No relevant prior work found for this query."
+    parts = [f"Found {len(citations)} relevant snippet(s):\n"]
     for i, c in enumerate(citations, 1):
         parts.append(f"## Snippet {i}\n{c.format()}\n")
     return "\n".join(parts)
@@ -124,7 +124,7 @@ def format_for_prompt(citations: list[Citation]) -> str:
 
 @tool
 def retrieve_knowledge_tool(query: str, top_k: int = 5) -> str:
-    """Search UST's knowledge store for prior code matching the query.
+    """Search the knowledge store for prior code matching the query.
 
     Returns formatted code snippets with citations (repo/path:symbol@commit).
     Deprecated snippets are flagged with a warning symbol.

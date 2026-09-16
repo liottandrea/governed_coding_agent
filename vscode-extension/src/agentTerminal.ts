@@ -72,7 +72,7 @@ class Renderer {
 
   welcome(): void {
     this.ln();
-    this.ln(C.bold + C.cyan + "  UST Coding Agent" + C.reset);
+    this.ln(C.bold + C.cyan + "  Governed Coding Agent" + C.reset);
     this.ln(
       C.gray +
       "  Enter ↵ submit  ·  Alt+Enter newline  ·  ↑↓ history  ·  Ctrl+C cancel" +
@@ -307,7 +307,7 @@ export class AgentTerminalPty implements vscode.Pseudoterminal {
         this.sessionId = ev.session_id;
         this.r.stopSpinner();
         this.r.sessionHeader(ev.session_id);
-        this._nameChange.fire("UST Agent · " + ev.session_id.slice(0, 8));
+        this._nameChange.fire("Governed Coding Agent · " + ev.session_id.slice(0, 8));
         this.toPrompt();
         break;
 
@@ -511,7 +511,7 @@ export class AgentTerminalPty implements vscode.Pseudoterminal {
   }
 
   private settings() {
-    const cfg = vscode.workspace.getConfiguration("ustAgent");
+    const cfg = vscode.workspace.getConfiguration("governedCodingAgent");
     return {
       dataClass:        (cfg.get<string>("dataClass")      ?? "internal") as DataClass,
       role:             (cfg.get<string>("role")           ?? "planner")  as Role,

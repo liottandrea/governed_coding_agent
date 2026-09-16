@@ -4,7 +4,7 @@ Chunks Python source files on function/class boundaries using tree-sitter,
 embeds each chunk through the gateway, and loads it into pgvector.
 
 Usage:
-    from ust_agent.knowledge.ingest import ingest_seed
+    from governed_coding_agent.knowledge.ingest import ingest_seed
     ingest_seed()          # loads everything under seed/
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ import tree_sitter_python as tspython
 from pgvector.psycopg import register_vector
 from tree_sitter import Language, Parser
 
-from ust_agent import gateway
+from governed_coding_agent import gateway
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +35,8 @@ def _dsn() -> str:
     return (
         f"host={os.environ.get('POSTGRES_HOST','localhost')} "
         f"port={os.environ.get('POSTGRES_PORT','5432')} "
-        f"dbname={os.environ.get('POSTGRES_DB','ust_agent')} "
-        f"user={os.environ.get('POSTGRES_USER','ust_agent')} "
+        f"dbname={os.environ.get('POSTGRES_DB','governed_coding_agent')} "
+        f"user={os.environ.get('POSTGRES_USER','governed_coding_agent')} "
         f"password={os.environ.get('POSTGRES_PASSWORD','changeme')}"
     )
 
@@ -124,7 +124,7 @@ def chunk_python_file(
 
 # ── embedding + DB load ───────────────────────────────────────────────────────
 _INSERT_SQL = """
-INSERT INTO ust_chunks (repo, path, commit, chunk_type, symbol, content, embedding, deprecated)
+INSERT INTO code_chunks (repo, path, commit, chunk_type, symbol, content, embedding, deprecated)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
 ON CONFLICT (repo, path, symbol, commit) DO UPDATE
     SET content    = EXCLUDED.content,
@@ -175,7 +175,7 @@ def load_chunks(
 # ── seed ingest entry point ───────────────────────────────────────────────────
 def ingest_seed(
     seed_dir: Path | None = None,
-    repo: str = "ust-seed",
+    repo: str = "seed-corpus",
     commit: str = "seed",
     data_class: str = "internal",
 ) -> int:

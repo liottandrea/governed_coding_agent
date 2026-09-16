@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# start.sh — UST Coding Agent startup script
+# start.sh — Governed Coding Agent startup script
 #
 # Checks all prerequisites, starts Docker services, waits for health,
 # initialises the database, ingests seed knowledge, and launches the
-# Headroom proxy. Leaves you ready to run `ust-agent`.
+# Headroom proxy. Leaves you ready to run `governed-coding-agent`.
 #
 # Usage:
 #   ./start.sh              # full startup
@@ -36,7 +36,7 @@ esac
 
 # ── Stop mode ─────────────────────────────────────────────────────────────────
 if [[ "$MODE" == "stop" ]]; then
-  banner "Stopping UST Coding Agent services"
+  banner "Stopping Governed Coding Agent services"
   cd "$SCRIPT_DIR"
   docker compose down && ok "Docker services stopped" || warn "docker compose down failed"
   pkill -f "headroom proxy" 2>/dev/null && ok "Headroom proxy stopped" || warn "Headroom was not running"
@@ -45,7 +45,7 @@ fi
 
 # ── Status mode ───────────────────────────────────────────────────────────────
 if [[ "$MODE" == "status" ]]; then
-  banner "UST Coding Agent — service status"
+  banner "Governed Coding Agent — service status"
   cd "$SCRIPT_DIR"
   echo ""
   docker compose ps 2>/dev/null || warn "docker compose not available"
@@ -61,7 +61,7 @@ if [[ "$MODE" == "status" ]]; then
   else
     warn "Langfuse        not responding"
   fi
-  PG_OK=$(docker compose exec -T postgres pg_isready -U ust_agent -d ust_agent 2>/dev/null | grep "accepting" || true)
+  PG_OK=$(docker compose exec -T postgres pg_isready -U governed_agent -d governed_agent 2>/dev/null | grep "accepting" || true)
   if [[ -n "$PG_OK" ]]; then
     ok "Postgres        localhost:15432"
   else
@@ -72,7 +72,7 @@ fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 banner "╔══════════════════════════════════════════════╗"
-echo -e "${BOLD}║       UST Coding Agent — startup check       ║${RESET}"
+echo -e "${BOLD}║     Governed Coding Agent — startup check    ║${RESET}"
 banner "╚══════════════════════════════════════════════╝"
 echo ""
 cd "$SCRIPT_DIR"
@@ -202,15 +202,15 @@ else
 fi
 
 # Touch source files so Python's .pyc cache never silently serves stale bytecode.
-touch "$SCRIPT_DIR"/src/ust_agent/*.py "$SCRIPT_DIR"/src/ust_agent/**/*.py 2>/dev/null || true
-find "$SCRIPT_DIR/src/ust_agent" -name "*.pyc" -delete 2>/dev/null || true
+touch "$SCRIPT_DIR"/src/governed_coding_agent/*.py "$SCRIPT_DIR"/src/governed_coding_agent/**/*.py 2>/dev/null || true
+find "$SCRIPT_DIR/src/governed_coding_agent" -name "*.pyc" -delete 2>/dev/null || true
 
-# Install ust-agent as a global tool (editable) so it's on $PATH from any directory.
+# Install governed-coding-agent as a global tool (editable) so it's on $PATH from any directory.
 # --reinstall ensures updates are always picked up.
 if uv tool install --editable "$SCRIPT_DIR" --reinstall --quiet 2>/dev/null; then
-  ok "ust-agent installed globally  (uv tool install -e . --reinstall)"
+  ok "governed-coding-agent installed globally  (uv tool install -e . --reinstall)"
 else
-  warn "Could not install ust-agent globally — run: uv tool install -e . --reinstall"
+  warn "Could not install governed-coding-agent globally — run: uv tool install -e . --reinstall"
 fi
 
 # ── SECTION 3: Docker services ───────────────────────────────────────────────
@@ -219,7 +219,7 @@ docker compose up -d
 info "Waiting for Postgres to be healthy..."
 RETRIES=0
 until docker compose exec -T postgres \
-      pg_isready -U ust_agent -d ust_agent &>/dev/null; do
+      pg_isready -U governed_agent -d governed_agent &>/dev/null; do
   RETRIES=$(( RETRIES + 1 ))
   if [[ "$RETRIES" -ge 30 ]]; then
     fail "Postgres did not become healthy after 30 retries"
@@ -247,11 +247,11 @@ fi
 banner "4 / 5  Database initialisation"
 info "Creating pgvector schema (idempotent)..."
 uv run python scripts/init_db.py
-ok "Schema ready  (ust_chunks + vector index)"
+ok "Schema ready  (code_chunks + vector index)"
 
 info "Ingesting seed knowledge corpus..."
 CHUNK_COUNT=$(uv run python -c "
-from ust_agent.knowledge.ingest import ingest_seed
+from governed_coding_agent.knowledge.ingest import ingest_seed
 print(ingest_seed())
 " 2>/dev/null)
 if [[ -n "$CHUNK_COUNT" && "$CHUNK_COUNT" -gt 0 ]]; then
@@ -296,17 +296,17 @@ fi
 # ── Ready ─────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-echo -e "${GREEN}${BOLD}  UST Coding Agent is ready.${RESET}"
+echo -e "${GREEN}${BOLD}  Governed Coding Agent is ready.${RESET}"
 echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
 echo ""
 echo -e "  ${BOLD}Start a session:${RESET}"
-echo -e "    ust-agent"
+echo -e "    governed-coding-agent"
 echo ""
 echo -e "  ${BOLD}Run the demo:${RESET}"
 echo -e "    uv run python scripts/demo.py"
 echo ""
 echo -e "  ${BOLD}Observability:${RESET}"
-echo -e "    Langfuse  →  http://localhost:13000  (admin@ust-agent.local / UstAgent2024!)"
+echo -e "    Langfuse  →  http://localhost:13000  (log in with LANGFUSE_INIT_USER_EMAIL / LANGFUSE_INIT_USER_PASSWORD from your .env)"
 if curl -sf "http://localhost:${HEADROOM_PORT}/livez" &>/dev/null; then
   echo -e "    Headroom  →  http://localhost:${HEADROOM_PORT}/stats"
 fi
