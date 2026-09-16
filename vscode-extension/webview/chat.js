@@ -9,11 +9,46 @@
   const inputEl         = document.getElementById("input");
   const btnSend         = document.getElementById("btn-send");
   const btnNew          = document.getElementById("btn-new");
+  const btnSettings     = document.getElementById("btn-settings");
   const btnHistory      = document.getElementById("btn-history");
   const btnCloseSession = document.getElementById("btn-close-sessions");
   const sessionsPanel   = document.getElementById("sessions-panel");
   const sessionsList    = document.getElementById("sessions-list");
+  const settingsPanel   = document.getElementById("settings-panel");
   const btnStartEmpty   = document.getElementById("btn-start-empty");
+  const modelPill       = document.getElementById("model-pill");
+
+  // Settings controls
+  const ctrlDataClass    = document.getElementById("ctrl-data-class");
+  const ctrlRole         = document.getElementById("ctrl-role");
+  const ctrlPlanner      = document.getElementById("ctrl-planner");
+  const ctrlSubagent     = document.getElementById("ctrl-subagent");
+  const ctrlKnowledge    = document.getElementById("ctrl-knowledge");
+  const ctrlSystemPrompt = document.getElementById("ctrl-system-prompt");
+
+  // ── Settings helpers ──────────────────────────────────────────────────────
+
+  function getSettings() {
+    return {
+      data_class:       ctrlDataClass.value,
+      role:             ctrlRole.value,
+      plannerModel:     ctrlPlanner.value,
+      subagentModel:    ctrlSubagent.value,
+      include_knowledge: ctrlKnowledge.checked,
+      system_prompt:    ctrlSystemPrompt.value.trim(),
+    };
+  }
+
+  function updateModelPill() {
+    const s = getSettings();
+    modelPill.textContent = `${s.data_class} · ${s.plannerModel}`;
+  }
+
+  [ctrlDataClass, ctrlRole, ctrlPlanner, ctrlSubagent, ctrlKnowledge].forEach(el => {
+    el.addEventListener("change", updateModelPill);
+  });
+
+  updateModelPill();
 
   // ── State ─────────────────────────────────────────────────────────────────
   let busy              = false;
@@ -303,7 +338,7 @@
         messagesEl.innerHTML = "";
         setBusy(true);
         showThinking();
-        vscode.postMessage({ type: "resume_session", thread_id: row.thread_id });
+        vscode.postMessage({ type: "resume_session", thread_id: row.thread_id, settings: getSettings() });
       });
       sessionsList.appendChild(btn);
     });
@@ -330,7 +365,7 @@
     activeToolList = null; activeTool = null;
     setBusy(true);
     showThinking();
-    vscode.postMessage({ type: "new_session" });
+    vscode.postMessage({ type: "new_session", settings: getSettings() });
   }
 
   // ── Inbound messages ──────────────────────────────────────────────────────
@@ -427,9 +462,18 @@
 
   btnStartEmpty && btnStartEmpty.addEventListener("click", newSession);
 
+  btnSettings.addEventListener("click", () => {
+    settingsPanel.classList.toggle("hidden");
+    // close history if open
+    if (!settingsPanel.classList.contains("hidden")) {
+      sessionsPanel.classList.add("hidden");
+    }
+  });
+
   btnHistory.addEventListener("click", () => {
     sessionsPanel.classList.toggle("hidden");
     if (!sessionsPanel.classList.contains("hidden")) {
+      settingsPanel.classList.add("hidden");
       vscode.postMessage({ type: "refresh_sessions" });
     }
   });

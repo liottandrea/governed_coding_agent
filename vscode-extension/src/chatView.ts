@@ -3,7 +3,7 @@ import { AgentClient } from "./agentClient";
 import { DataClass, Role, ModelGroup, AgentEvent } from "./types";
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = "ust-agent.chatView";
+  public static readonly viewType = "governed-coding-agent.chatView";
 
   private view?: vscode.WebviewView;
   private cwd: string;
@@ -38,10 +38,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           this.client.send({ type: "sessions" });
           break;
         case "new_session":
-          this.sendStart(undefined);
+          this.sendStart(undefined, msg.settings);
           break;
         case "resume_session":
-          this.sendStart(msg.thread_id as string);
+          this.sendStart(msg.thread_id as string, msg.settings);
           break;
         case "task":
           this.client.send({ type: "task", message: msg.message as string });
@@ -59,18 +59,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   startNewSession(): void { this.sendStart(undefined); }
   resumeSession(threadId: string): void { this.sendStart(threadId); }
 
-  private sendStart(threadId: string | undefined): void {
+  private sendStart(threadId: string | undefined, ui?: Record<string, unknown>): void {
     if (!this.client.isRunning()) this.client.start(this.cwd);
-    const cfg = vscode.workspace.getConfiguration("ustAgent");
-    const sub = (cfg.get<string>("subagentModel") ?? "cheap") as ModelGroup;
+    const cfg = vscode.workspace.getConfiguration("governedCodingAgent");
+    const sub = ((ui?.subagentModel as string) ?? cfg.get<string>("subagentModel") ?? "cheap") as ModelGroup;
     this.client.send({
       type:              "start",
       thread_id:         threadId,
-      data_class:        (cfg.get<string>("dataClass")      ?? "internal") as DataClass,
-      role:              (cfg.get<string>("role")            ?? "planner")  as Role,
-      include_knowledge: cfg.get<boolean>("includeKnowledge") ?? true,
+      data_class:        ((ui?.data_class  as string)  ?? cfg.get<string>("dataClass")       ?? "internal") as DataClass,
+      role:              ((ui?.role        as string)  ?? cfg.get<string>("role")             ?? "planner")  as Role,
+      include_knowledge: ((ui?.include_knowledge as boolean) ?? cfg.get<boolean>("includeKnowledge") ?? true),
+      system_prompt:     (ui?.system_prompt as string) || undefined,
       group_overrides: {
-        planner:             (cfg.get<string>("plannerModel") ?? "mid") as ModelGroup,
+        planner:             ((ui?.plannerModel as string) ?? cfg.get<string>("plannerModel") ?? "mid") as ModelGroup,
         codegen:             sub,
         knowledge_retrieval: sub,
         summary:             sub,
@@ -95,7 +96,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       '  <meta name="viewport" content="width=device-width,initial-scale=1.0">',
       `  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">`,
       `  <link rel="stylesheet" href="${cssUri}">`,
-      "  <title>UST Agent</title>",
+      "  <title>Governed Coding Agent</title>",
       "</head>",
       "<body>",
       '  <div id="app">',
@@ -110,13 +111,73 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       '          <line x1="8.5" y1="16" x2="11" y2="16"/>',
       '          <line x1="13" y1="16" x2="15.5" y2="16"/>',
       "        </svg>",
-      '        <span class="brand-name">UST Agent</span>',
+      '        <span class="brand-name">Governed Coding Agent</span>',
       "      </span>",
       '      <div class="header-actions">',
-      '        <button id="btn-new" class="icon-btn" title="New chat">+</button>',
-      '        <button id="btn-history" class="icon-btn" title="Session history">&#x29d6;</button>',
+      '        <button id="btn-new"      class="icon-btn" title="New chat">+</button>',
+      '        <button id="btn-settings" class="icon-btn" title="Settings">&#9881;</button>',
+      '        <button id="btn-history"  class="icon-btn" title="Session history">&#x29d6;</button>',
       "      </div>",
       "    </header>",
+
+      /* ── Settings drawer ── */
+      '    <div id="settings-panel" class="hidden">',
+      '      <div class="settings-row">',
+      '        <div class="setting-group">',
+      '          <label class="setting-label" for="ctrl-data-class">Data class</label>',
+      '          <select id="ctrl-data-class">',
+      '            <option value="public">Public</option>',
+      '            <option value="internal" selected>Internal</option>',
+      '            <option value="restricted">Restricted</option>',
+      "          </select>",
+      "        </div>",
+      '        <div class="setting-group">',
+      '          <label class="setting-label" for="ctrl-role">Role</label>',
+      '          <select id="ctrl-role">',
+      '            <option value="planner" selected>Planner</option>',
+      '            <option value="codegen">Codegen</option>',
+      "          </select>",
+      "        </div>",
+      "      </div>",
+      '      <div class="settings-row">',
+      '        <div class="setting-group">',
+      '          <label class="setting-label" for="ctrl-planner">Planner model</label>',
+      '          <select id="ctrl-planner">',
+      '            <option value="cheap">Haiku — cheap</option>',
+      '            <option value="mid" selected>Sonnet — mid</option>',
+      '            <option value="frontier">Sonnet 4.6 — frontier</option>',
+      '            <option value="local_fast">phi4-mini — local</option>',
+      '            <option value="local_standard">devstral — local</option>',
+      '            <option value="local_heavy">qwen 35B — local</option>',
+      "          </select>",
+      "        </div>",
+      '        <div class="setting-group">',
+      '          <label class="setting-label" for="ctrl-subagent">Subagent model</label>',
+      '          <select id="ctrl-subagent">',
+      '            <option value="cheap" selected>Haiku — cheap</option>',
+      '            <option value="mid">Sonnet — mid</option>',
+      '            <option value="frontier">Sonnet 4.6 — frontier</option>',
+      '            <option value="local_fast">phi4-mini — local</option>',
+      '            <option value="local_standard">devstral — local</option>',
+      '            <option value="local_heavy">qwen 35B — local</option>',
+      "          </select>",
+      "        </div>",
+      "      </div>",
+      '      <div class="settings-row">',
+      '        <div class="setting-group toggle-group">',
+      '          <input type="checkbox" id="ctrl-knowledge" checked>',
+      '          <label class="setting-label" for="ctrl-knowledge">Include knowledge</label>',
+      "        </div>",
+      "      </div>",
+      '      <div class="settings-row">',
+      '        <div class="setting-group full">',
+      '          <label class="setting-label" for="ctrl-system-prompt">System prompt</label>',
+      '          <textarea id="ctrl-system-prompt" rows="3" placeholder="Leave blank for default…"></textarea>',
+      "        </div>",
+      "      </div>",
+      "    </div>",
+
+      /* ── Session history drawer ── */
       '    <div id="sessions-panel" class="hidden">',
       '      <div id="sessions-header">',
       "        <span>Recent sessions</span>",
@@ -124,16 +185,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       "      </div>",
       '      <div id="sessions-list"></div>',
       "    </div>",
+
       '    <div id="messages" role="log" aria-live="polite">',
       '      <div class="empty-state">',
       "        <p>Start a new chat or resume a past session.</p>",
       '        <button id="btn-start-empty" class="primary-btn">New chat</button>',
       "      </div>",
       "    </div>",
+
       '    <div id="input-row">',
-      '      <textarea id="input" placeholder="Message UST Agent…" rows="1" aria-label="Message"></textarea>',
-      '      <button id="btn-send" title="Send">↑</button>',
+      '      <textarea id="input" placeholder="Message Governed Coding Agent…" rows="1" aria-label="Message"></textarea>',
+      '      <button id="btn-send" title="Send">&#x2191;</button>',
       "    </div>",
+      '    <div id="model-pill-row"><span id="model-pill">internal · mid</span></div>',
       "  </div>",
       `  <script nonce="${nonce}" src="${jsUri}"></script>`,
       "</body>",

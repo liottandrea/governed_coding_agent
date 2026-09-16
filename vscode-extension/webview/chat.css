@@ -75,6 +75,94 @@ body {
 .icon-btn:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }
 .icon-btn.small { font-size: 11px; padding: 2px 4px; }
 
+/* ── Settings drawer ─────────────────────────────────────────────────────── */
+
+#settings-panel {
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  flex-shrink: 0;
+  overflow: hidden;
+}
+#settings-panel.hidden { display: none; }
+
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 12px 0;
+}
+.settings-row:last-child { padding-bottom: 10px; }
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 110px;
+}
+.setting-group.toggle-group {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding-top: 12px;
+  flex: 0 0 auto;
+}
+.setting-group.full { flex: 1 1 100%; min-width: 100%; }
+
+.setting-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vscode-descriptionForeground);
+  cursor: default;
+}
+.setting-group.toggle-group .setting-label { text-transform: none; letter-spacing: 0; font-size: 12px; cursor: pointer; }
+
+select {
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  background: var(--vscode-dropdown-background, var(--vscode-input-background));
+  color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
+  border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  padding: 3px 6px;
+  cursor: pointer;
+  width: 100%;
+}
+select:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+
+#ctrl-system-prompt {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 12px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 3px;
+  padding: 5px 7px;
+  resize: vertical;
+  width: 100%;
+  line-height: 1.5;
+}
+#ctrl-system-prompt:focus { border-color: var(--vscode-focusBorder); outline: none; }
+#ctrl-system-prompt::placeholder { color: var(--vscode-input-placeholderForeground); }
+
+/* ── Model pill row ───────────────────────────────────────────────────────── */
+
+#model-pill-row {
+  padding: 3px 12px 5px;
+  flex-shrink: 0;
+}
+
+#model-pill {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--vscode-descriptionForeground);
+  background: var(--vscode-badge-background);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
 /* ── Sessions panel ───────────────────────────────────────────────────────── */
 
 #sessions-panel {
