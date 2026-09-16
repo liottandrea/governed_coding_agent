@@ -3,15 +3,15 @@ services:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ust_agent
-      POSTGRES_USER: ust_agent
-      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: governed_agent
+      POSTGRES_USER: governed_agent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
       - "15432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ust_agent -d ust_agent"]
+      test: ["CMD-SHELL", "pg_isready -U governed_agent -d governed_agent"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,23 +25,23 @@ services:
     ports:
       - "13000:3000"
     environment:
-      DATABASE_URL: postgresql://ust_agent:changeme@postgres:5432/ust_agent
-      NEXTAUTH_SECRET: changeme-nextauth-secret
-      SALT: changeme-salt
+      DATABASE_URL: postgresql://governed_agent:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/governed_agent
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET in .env (e.g. openssl rand -hex 32)}
+      SALT: ${SALT:?Set SALT in .env (e.g. openssl rand -hex 16)}
       NEXTAUTH_URL: http://localhost:13000
       TELEMETRY_ENABLED: "false"
       LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
       # Seed a default org/project/user on first boot so CI and local dev
       # can use predictable API keys without manual UI setup.
-      LANGFUSE_INIT_ORG_ID: ust-org
-      LANGFUSE_INIT_ORG_NAME: UST
-      LANGFUSE_INIT_PROJECT_ID: ust-coding-agent
-      LANGFUSE_INIT_PROJECT_NAME: ust-coding-agent
-      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-ust-coding-agent-local
-      LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-ust-coding-agent-local
-      LANGFUSE_INIT_USER_EMAIL: admin@ust-agent.local
-      LANGFUSE_INIT_USER_PASSWORD: UstAgent2024!
-      LANGFUSE_INIT_USER_NAME: UST Admin
+      LANGFUSE_INIT_ORG_ID: governed-agent-org
+      LANGFUSE_INIT_ORG_NAME: Governed Coding Agent
+      LANGFUSE_INIT_PROJECT_ID: governed-coding-agent
+      LANGFUSE_INIT_PROJECT_NAME: governed-coding-agent
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:?Set LANGFUSE_INIT_PROJECT_PUBLIC_KEY in .env (any string, e.g. pk-lf-local)}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:?Set LANGFUSE_INIT_PROJECT_SECRET_KEY in .env (any string, e.g. sk-lf-local)}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-admin@example.com}
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:?Set LANGFUSE_INIT_USER_PASSWORD in .env}
+      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-Admin}
 
 volumes:
   pgdata:

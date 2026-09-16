@@ -31,3 +31,5 @@ venv/
 *.log
 pgdata/
 .headroom/
+*.db
+*.sqlite3
